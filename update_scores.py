@@ -20,9 +20,10 @@ else:
 
 client = gspread.authorize(creds)
 
-# Open your spreadsheet (replace with your exact spreadsheet name if different)
-SHEET_NAME = "PL Predictions"
-sheet = client.open(SHEET_NAME).sheet1
+# Open the Google Sheet file and target the 'Fixtures' tab
+# Replace "PL Predictions" below with your exact Google Sheet filename if different
+spreadsheet_name = "PL Predictions" 
+sheet = client.open(spreadsheet_name).worksheet("Fixtures")
 
 # 2. Football API Setup
 API_KEY = os.environ.get("FOOTBALL_DATA_API_KEY", "b4d7bcc9be7147d78e53c7f11c9ec283")
@@ -96,8 +97,8 @@ for m in matches:
 if new_rows_to_add:
     for new_row in new_rows_to_add:
         sheet.append_row(new_row)
-    print(f"Added {len(new_rows_to_add)} missing fixtures for Gameweek {current_matchday} to Google Sheet.")
+    print(f"Added {len(new_rows_to_add)} missing fixtures for Gameweek {current_matchday} to 'Fixtures' tab.")
 else:
-    print(f"All Gameweek {current_matchday} fixtures already exist in Google Sheet.")
+    print(f"All Gameweek {current_matchday} fixtures already exist in 'Fixtures' tab.")
 
 print(f"Finished. Total score updates made: {updates_count}")
