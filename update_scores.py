@@ -19,7 +19,7 @@ else:
 
 client = gspread.authorize(creds)
 
-# Exact File & Tab names from your Excel workbook
+# Exact File & Tab names matching your workbook
 FILE_NAME = "PL Predictions"
 TAB_NAME = "Fixtures Tab"
 
@@ -56,7 +56,7 @@ all_rows = sheet.get_all_values()
 
 # Existing fixtures map (Home Team in Col 2, Away Team in Col 3)
 existing_fixtures = {}
-for i, row in enumerate(all_rows[1:], start=2): # skip headers
+for i, row in enumerate(all_rows[1:], start=2):  # skip headers
     if len(row) >= 3:
         key = f"{row[1].strip().lower()} vs {row[2].strip().lower()}"
         existing_fixtures[key] = i
@@ -82,12 +82,12 @@ for m in matches:
 
     if fixture_key in existing_fixtures:
         row_num = existing_fixtures[fixture_key]
-        current_home_val = sheet.cell(row_num, 7).value if len(all_rows[row_num-1]) >= 7 else None
+        current_home_val = sheet.cell(row_num, 7).value if len(all_rows[row_num - 1]) >= 7 else None
         
         if status == "FINISHED" and (current_home_val is None or current_home_val == ""):
-            sheet.update_cell(row_num, 7, home_score) # Actual Home Score (Col 7)
-            sheet.update_cell(row_num, 8, away_score) # Actual Away Score (Col 8)
-            sheet.update_cell(row_num, 9, status)     # Status (Col 9)
+            sheet.update_cell(row_num, 7, home_score)  # Actual Home Score (Col 7)
+            sheet.update_cell(row_num, 8, away_score)  # Actual Away Score (Col 8)
+            sheet.update_cell(row_num, 9, status)      # Status (Col 9)
             print(f"Updated score: {home_team} {home_score} - {away_score} {away_team}")
             updates_count += 1
     else:
