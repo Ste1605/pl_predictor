@@ -1,6 +1,7 @@
 import os
 import requests
 import gspread
+from datetime import datetime, timedelta
 from google.oauth2.service_account import Credentials
 
 # 1. Google Sheets Setup
@@ -72,6 +73,16 @@ for m in matches:
     status = m.get("status", "SCHEDULED")
     gameweek = f"GW{current_matchday}"
     
+    # Calculate Deadline (1 Hour Before Kickoff)
+    deadline_str = ""
+    if kickoff_time:
+        try:
+            dt = datetime.fromisoformat(kickoff_time.replace("Z", "+00:00"))
+            deadline_dt = dt - timedelta(hours=1)
+            deadline_str = deadline_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+        except ValueError:
+            deadline_str = kickoff_time
+
     home_score = ""
     away_score = ""
     if status == "FINISHED":
@@ -92,7 +103,7 @@ for m in matches:
             updates_count += 1
     else:
         # Match ID, Home Team, Away Team, GameWeek, Kickoff Time, Deadline, Actual Home Score, Actual Away Score, Status
-        new_rows_to_add.append([match_id, home_team, away_team, gameweek, kickoff_time, "", home_score, away_score, status])
+        new_rows_to_add.append([match_id, home_team, away_team, gameweek, kickoff_time, deadline_str, home_score, away_score, status])
 
 if new_rows_to_add:
     for new_row in new_rows_to_add:
