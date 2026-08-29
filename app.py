@@ -15,63 +15,42 @@ st.set_page_config(
 # Premier League Header Logo URL
 PL_LOGO_URL = "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg"
 
-# Premier League Official Team Badge Directory
+# Premier League Official Team Badge Directory (Reliable PNG CDN Links)
 TEAM_BADGES = {
-    "brighton hove": "https://upload.wikimedia.org/wikipedia/en/thumb/d/d0/Brighton_and_Hove_Albion_FC_crest.svg/250px-Brighton_and_Hove_Albion_FC_crest.svg.png",
-    "brighton & hove albion": "https://upload.wikimedia.org/wikipedia/en/thumb/d/d0/Brighton_and_Hove_Albion_FC_crest.svg/250px-Brighton_and_Hove_Albion_FC_crest.svg.png",
-    "brighton": "https://upload.wikimedia.org/wikipedia/en/thumb/d/d0/Brighton_and_Hove_Albion_FC_crest.svg/250px-Brighton_and_Hove_Albion_FC_crest.svg.png",
-    
-    "aston villa": "https://upload.wikimedia.org/wikipedia/en/thumb/9/9a/Aston_Villa_FC_new_crest.svg/250px-Aston_Villa_FC_new_crest.svg.png",
-    "aston villa fc": "https://upload.wikimedia.org/wikipedia/en/thumb/9/9a/Aston_Villa_FC_new_crest.svg/250px-Aston_Villa_FC_new_crest.svg.png",
-    
-    "fulham": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/600px_FFC_su_sfondo_Bianco_e_Nero.png/960px-600px_FFC_su_sfondo_Bianco_e_Nero.png",
-    "fulham fc": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/600px_FFC_su_sfondo_Bianco_e_Nero.png/960px-600px_FFC_su_sfondo_Bianco_e_Nero.png",
-    
-    "coventry city": "https://upload.wikimedia.org/wikipedia/en/thumb/7/7b/Coventry_City_FC_crest.svg/250px-Coventry_City_FC_crest.svg.png",
-    "coventry": "https://upload.wikimedia.org/wikipedia/en/thumb/7/7b/Coventry_City_FC_crest.svg/250px-Coventry_City_FC_crest.svg.png",
-
-    "arsenal": "https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg",
-    "bournemouth": "https://upload.wikimedia.org/wikipedia/en/e/e5/AFC_Bournemouth_%282013%29.svg",
-    "brentford": "https://upload.wikimedia.org/wikipedia/en/2/2a/Brentford_FC_crest.svg",
-    "chelsea": "https://upload.wikimedia.org/wikipedia/en/c/cc/Chelsea_FC.svg",
-    "crystal palace": "https://upload.wikimedia.org/wikipedia/en/a/a2/Crystal_Palace_FC_logo_%282022%29.svg",
-    "everton": "https://upload.wikimedia.org/wikipedia/en/7/7c/Everton_FC_logo.svg",
-    "hull city": "https://upload.wikimedia.org/wikipedia/en/5/54/Hull_City_A.F.C._logo.svg",
-    "ipswich town": "https://upload.wikimedia.org/wikipedia/en/4/43/Ipswich_Town.svg",
-    "leeds united": "https://upload.wikimedia.org/wikipedia/en/5/54/Leeds_United_F.C._logo.svg",
-    "leicester city": "https://upload.wikimedia.org/wikipedia/en/2/2d/Leicester_City_crest.svg",
-    "liverpool": "https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg",
-    "man city": "https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg",
-    "manchester city": "https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg",
-    "man united": "https://upload.wikimedia.org/wikipedia/en/7/7a/Manchester_United_FC_crest.svg",
-    "manchester united": "https://upload.wikimedia.org/wikipedia/en/7/7a/Manchester_United_FC_crest.svg",
-    "newcastle": "https://upload.wikimedia.org/wikipedia/en/5/56/Newcastle_United_Logo.svg",
-    "newcastle united": "https://upload.wikimedia.org/wikipedia/en/5/56/Newcastle_United_Logo.svg",
-    "nottingham": "https://upload.wikimedia.org/wikipedia/en/e/e5/Nottingham_Forest_F.C._logo.svg",
-    "nottingham forest": "https://upload.wikimedia.org/wikipedia/en/e/e5/Nottingham_Forest_F.C._logo.svg",
-    "southampton": "https://upload.wikimedia.org/wikipedia/en/c/c9/FC_Southampton.svg",
-    "sunderland": "https://upload.wikimedia.org/wikipedia/en/7/77/Logo_Sunderland.svg",
-    "tottenham": "https://upload.wikimedia.org/wikipedia/en/b/b4/Tottenham_Hotspur.svg",
-    "tottenham hotspur": "https://upload.wikimedia.org/wikipedia/en/b/b4/Tottenham_Hotspur.svg",
-    "west ham": "https://upload.wikimedia.org/wikipedia/en/c/c2/West_Ham_United_FC_logo.svg",
-    "wolves": "https://upload.wikimedia.org/wikipedia/en/c/c9/Wolverhampton_Wanderers_FC_crest.svg",
-    "wolverhampton wanderers": "https://upload.wikimedia.org/wikipedia/en/c/c9/Wolverhampton_Wanderers_FC_crest.svg"
+    "arsenal": "https://a.espncdn.com/i/teamlogos/soccer/500/359.png",
+    "aston villa": "https://a.espncdn.com/i/teamlogos/soccer/500/362.png",
+    "bournemouth": "https://a.espncdn.com/i/teamlogos/soccer/500/349.png",
+    "brentford": "https://a.espncdn.com/i/teamlogos/soccer/500/337.png",
+    "brighton": "https://a.espncdn.com/i/teamlogos/soccer/500/331.png",
+    "brighton & hove albion": "https://a.espncdn.com/i/teamlogos/soccer/500/331.png",
+    "chelsea": "https://a.espncdn.com/i/teamlogos/soccer/500/363.png",
+    "crystal palace": "https://a.espncdn.com/i/teamlogos/soccer/500/384.png",
+    "everton": "https://a.espncdn.com/i/teamlogos/soccer/500/368.png",
+    "fulham": "https://a.espncdn.com/i/teamlogos/soccer/500/370.png",
+    "hull city": "https://a.espncdn.com/i/teamlogos/soccer/500/306.png",
+    "ipswich town": "https://a.espncdn.com/i/teamlogos/soccer/500/373.png",
+    "leeds united": "https://a.espncdn.com/i/teamlogos/soccer/500/357.png",
+    "leicester city": "https://a.espncdn.com/i/teamlogos/soccer/500/375.png",
+    "liverpool": "https://a.espncdn.com/i/teamlogos/soccer/500/364.png",
+    "manchester city": "https://a.espncdn.com/i/teamlogos/soccer/500/382.png",
+    "manchester united": "https://a.espncdn.com/i/teamlogos/soccer/500/360.png",
+    "newcastle united": "https://a.espncdn.com/i/teamlogos/soccer/500/361.png",
+    "nottingham forest": "https://a.espncdn.com/i/teamlogos/soccer/500/393.png",
+    "southampton": "https://a.espncdn.com/i/teamlogos/soccer/500/376.png",
+    "sunderland": "https://a.espncdn.com/i/teamlogos/soccer/500/366.png",
+    "tottenham hotspur": "https://a.espncdn.com/i/teamlogos/soccer/500/367.png",
+    "west ham united": "https://a.espncdn.com/i/teamlogos/soccer/500/371.png",
+    "wolverhampton wanderers": "https://a.espncdn.com/i/teamlogos/soccer/500/380.png"
 }
 
 def get_badge_url(team_name):
     clean_name = str(team_name).strip().lower()
     if clean_name in TEAM_BADGES:
         return TEAM_BADGES[clean_name]
-    if "brighton" in clean_name:
-        return TEAM_BADGES["brighton hove"]
-    if "villa" in clean_name:
-        return TEAM_BADGES["aston villa"]
-    if "fulham" in clean_name:
-        return TEAM_BADGES["fulham"]
-    if "coventry" in clean_name:
-        return TEAM_BADGES["coventry city"]
-    return TEAM_BADGES.get(clean_name, "https://upload.wikimedia.org/wikipedia/commons/d/d3/Soccerball.svg")
-
+    for key, url in TEAM_BADGES.items():
+        if key in clean_name or clean_name in key:
+            return url
+    return "https://a.espncdn.com/i/teamlogos/soccer/500/default-team-logo.png"
 # ------------------ STYLING (CSS) ------------------
 st.markdown("""
     <style>
