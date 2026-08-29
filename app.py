@@ -51,12 +51,13 @@ def get_badge_url(team_name):
         if key in clean_name or clean_name in key:
             return url
     return "https://a.espncdn.com/i/teamlogos/soccer/500/default-team-logo.png"
-# ------------------ STYLING (CSS) ------------------
+
+# ------------------ STYLING (OPTION 3: CLEAN LIGHT MODE) ------------------
 st.markdown("""
     <style>
     .stApp {
-        background-color: #0d1117;
-        color: #e6edf3;
+        background-color: #f8f9fa;
+        color: #1a202c;
         max-width: 850px;
         margin: 0 auto;
     }
@@ -66,28 +67,34 @@ st.markdown("""
         gap: 16px;
         margin-bottom: 24px;
         padding-bottom: 12px;
-        border-bottom: 2px solid #21262d;
+        border-bottom: 2px solid #cbd5e0;
     }
     .header-branding img { height: 52px; width: auto; }
-    .header-branding h1 { font-size: 28px; font-weight: 800; margin: 0; color: #f0f6fc; }
+    .header-branding h1 { font-size: 28px; font-weight: 800; margin: 0; color: #1a202c !important; }
     
     div[data-testid="stVerticalBlockBorderWrapper"] {
-        background-color: #161b22 !important;
-        border: 1px solid #30363d !important;
+        background-color: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
         border-radius: 12px !important;
         padding: 14px 16px !important;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
     }
-    .badge-ft { background: #1f6feb; color: #ffffff; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
-    .badge-locked { background-color: #21262d; color: #8b949e; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
-    .badge-pending { background-color: rgba(56, 139, 253, 0.15); color: #58a6ff; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
-    .pts-badge-green { color: #3fb950; font-weight: 700; background: rgba(46, 160, 67, 0.15); padding: 3px 8px; border-radius: 6px; }
-    .pts-badge-red { color: #f85149; font-weight: 700; background: rgba(248, 81, 73, 0.15); padding: 3px 8px; border-radius: 6px; }
+    div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+        border-color: #3182ce !important;
+    }
+
+    .badge-ft { background: #3182ce; color: #ffffff; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+    .badge-locked { background-color: #edf2f7; color: #718096; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+    .badge-pending { background-color: #ebf8ff; color: #2b6cb0; border: 1px solid #bee3f8; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+    
+    .pts-badge-green { color: #276749; font-weight: 700; background: #c6f6d5; padding: 3px 8px; border-radius: 6px; }
+    .pts-badge-red { color: #9b2c2c; font-weight: 700; background: #fed7d7; padding: 3px 8px; border-radius: 6px; }
 
     .team-row { display: flex; align-items: center; justify-content: space-between; margin: 8px 0; }
     .team-badge-container { display: flex; align-items: center; gap: 8px; }
     .team-crest { width: 22px; height: 22px; object-fit: contain; }
-    .team-name { font-size: 14px; font-weight: 700; color: #f0f6fc; }
-    .day-header { font-size: 13px; font-weight: 700; color: #a371f7; text-transform: uppercase; margin-top: 18px; margin-bottom: 8px; border-bottom: 1px solid #21262d; }
+    .team-name { font-size: 14px; font-weight: 700; color: #2d3748 !important; }
+    .day-header { font-size: 13px; font-weight: 700; color: #2b6cb0; text-transform: uppercase; margin-top: 18px; margin-bottom: 8px; border-bottom: 1px solid #e2e8f0; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -262,7 +269,7 @@ try:
                                         <img src="{home_crest}" class="team-crest" />
                                         <span class="team-name">{home}</span>
                                     </div>
-                                    <span style="color:#8b949e; font-size:12px;">vs</span>
+                                    <span style="color:#718096; font-size:12px;">vs</span>
                                     <div class="team-badge-container">
                                         <span class="team-name">{away}</span>
                                         <img src="{away_crest}" class="team-crest" />
@@ -296,7 +303,7 @@ try:
                                             <img src="{home_crest}" class="team-crest" />
                                             <span class="team-name">{home}</span>
                                         </div>
-                                        <div style="font-size:16px; font-weight:800; color:#a371f7;">{act_h} - {act_a}</div>
+                                        <div style="font-size:16px; font-weight:800; color:#3182ce;">{act_h} - {act_a}</div>
                                         <div class="team-badge-container">
                                             <span class="team-name">{away}</span>
                                             <img src="{away_crest}" class="team-crest" />
@@ -307,7 +314,7 @@ try:
                                     if saved_pred and saved_pred[0] != "" and saved_pred[1] != "":
                                         pts = calculate_points(saved_pred[0], saved_pred[1], act_h, act_a)
                                         badge_cls = "pts-badge-green" if pts is not None and pts > 0 else "pts-badge-red"
-                                        st.markdown(f"<div style='font-size:12px; color:#8b949e; margin-top:4px;'>Your Pick: <code>{saved_pred[0]} - {saved_pred[1]}</code> • <span class='{badge_cls}'>+{pts} Pts</span></div>", unsafe_allow_html=True)
+                                        st.markdown(f"<div style='font-size:12px; color:#718096; margin-top:4px;'>Your Pick: <code>{saved_pred[0]} - {saved_pred[1]}</code> • <span class='{badge_cls}'>+{pts} Pts</span></div>", unsafe_allow_html=True)
                                     else:
                                         st.caption("Your Pick: *No prediction submitted*")
 
