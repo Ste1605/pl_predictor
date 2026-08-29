@@ -61,7 +61,7 @@ SHORT_TEAM_NAMES = {
     "West Ham United FC": "West Ham",
     "West Ham United": "West Ham",
     "Tottenham Hotspur FC": "Tottenham",
-    "Tottenham Hotspur": "Spurs",
+    "Tottenham Hotspur": "Tottenham",
     "Nottingham Forest FC": "Nottingham Forest",
     "Manchester United FC": "Man United",
     "Manchester City FC": "Man City",
@@ -86,7 +86,7 @@ def get_short_name(team_name):
     clean = str(team_name).strip()
     return SHORT_TEAM_NAMES.get(clean, clean)
 
-# ------------------ STYLING (SOFT SLATE LIGHT MODE) ------------------
+# ------------------ STYLING (SOFT SLATE LIGHT MODE & CENTERED INPUTS) ------------------
 st.markdown("""
     <style>
     .stApp {
@@ -110,12 +110,22 @@ st.markdown("""
         background-color: #ffffff !important;
         border: 1px solid #cbd5e1 !important;
         border-radius: 12px !important;
-        padding: 14px 20px !important;
+        padding: 14px 16px !important;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         margin-bottom: 10px;
     }
     div[data-testid="stVerticalBlockBorderWrapper"]:hover {
         border-color: #2563eb !important;
+    }
+
+    /* Force Centered & Bold Numbers Inside Score Fields */
+    .stTextInput input {
+        text-align: center !important;
+        font-weight: 700 !important;
+        font-size: 16px !important;
+        color: #0f172a !important;
+        background-color: #f8fafc !important;
+        border-radius: 8px !important;
     }
 
     .badge-ft { background: #2563eb; color: #ffffff; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
@@ -127,8 +137,8 @@ st.markdown("""
 
     .team-row { display: flex; align-items: center; justify-content: space-between; margin: 8px 0; }
     .team-badge-container { display: flex; align-items: center; gap: 8px; }
-    .team-crest { width: 24px; height: 24px; object-fit: contain; }
-    .team-name { font-size: 15px; font-weight: 700; color: #1e293b !important; white-space: nowrap; }
+    .team-crest { width: 22px; height: 22px; object-fit: contain; }
+    .team-name { font-size: 14px; font-weight: 700; color: #1e293b !important; white-space: nowrap; }
     .day-header { font-size: 13px; font-weight: 700; color: #1d4ed8; text-transform: uppercase; margin-top: 18px; margin-bottom: 8px; border-bottom: 1px solid #cbd5e1; }
     </style>
 """, unsafe_allow_html=True)
@@ -275,94 +285,100 @@ try:
 
                 for day_str, matches in grouped_fixtures.items():
                     st.markdown(f"<div class='day-header'>📅 {day_str}</div>", unsafe_allow_html=True)
-
-                    for idx, match in enumerate(matches):
-                        match_id = str(match.get("Match ID", f"match_{idx}")).strip()
-                        raw_home = match.get("Home Team", "Home")
-                        raw_away = match.get("Away Team", "Away")
+                    
+                    # Render matches in side-by-side pairs (2 columns wide)
+                    for i in range(0, len(matches), 2):
+                        pair = matches[i:i+2]
+                        cols = st.columns(2)
                         
-                        home = get_short_name(raw_home)
-                        away = get_short_name(raw_away)
-                        
-                        home_crest = get_badge_url(raw_home)
-                        away_crest = get_badge_url(raw_away)
-                        
-                        kickoff = match.get("Kickoff Time", "")
-                        time_str = get_time_only(kickoff)
-                        status_val = str(match.get("Status", "")).strip().upper()
-                        
-                        is_finished = (status_val in ["FINISHED", "PAUSED"]) or (match_id in results_map)
-                        kickoff_passed = is_kickoff_passed(kickoff)
-                        
-                        user_key = (match_id, user_name.lower()) if user_name else None
-                        saved_pred = user_preds_map.get(user_key) if user_key else None
+                        for idx, match in enumerate(pair):
+                            match_id = str(match.get("Match ID", f"match_{i+idx}")).strip()
+                            raw_home = match.get("Home Team", "Home")
+                            raw_away = match.get("Away Team", "Away")
+                            
+                            home = get_short_name(raw_home)
+                            away = get_short_name(raw_away)
+                            
+                            home_crest = get_badge_url(raw_home)
+                            away_crest = get_badge_url(raw_away)
+                            
+                            kickoff = match.get("Kickoff Time", "")
+                            time_str = get_time_only(kickoff)
+                            status_val = str(match.get("Status", "")).strip().upper()
+                            
+                            is_finished = (status_val in ["FINISHED", "PAUSED"]) or (match_id in results_map)
+                            kickoff_passed = is_kickoff_passed(kickoff)
+                            
+                            user_key = (match_id, user_name.lower()) if user_name else None
+                            saved_pred = user_preds_map.get(user_key) if user_key else None
 
-                        with st.container(border=True):
-                            match_teams_html = f"""
-                            <div class="team-row">
-                                <div class="team-badge-container">
-                                    <img src="{home_crest}" class="team-crest" />
-                                    <span class="team-name">{home}</span>
-                                </div>
-                                <span style="color:#64748b; font-size:13px; font-weight:600;">vs</span>
-                                <div class="team-badge-container">
-                                    <span class="team-name">{away}</span>
-                                    <img src="{away_crest}" class="team-crest" />
-                                </div>
-                            </div>
-                            """
-
-                            if test_mode or (not is_finished and not kickoff_passed):
-                                has_submittable = True
-                                time_label = f" • {time_str}" if time_str else ""
-                                st.markdown(f"<span class='badge-pending'>UPCOMING{time_label}</span>", unsafe_allow_html=True)
-                                st.markdown(match_teams_html, unsafe_allow_html=True)
-                                
-                                init_h = str(saved_pred[0]) if saved_pred and saved_pred[0] is not None else ""
-                                init_a = str(saved_pred[1]) if saved_pred and saved_pred[1] is not None else ""
-
-                                p_col1, p_col2 = st.columns(2)
-                                with p_col1:
-                                    h_str = st.text_input(f"{home}", value=init_h, placeholder=home[:3].upper(), max_chars=2, key=f"home_{match_id}", label_visibility="collapsed")
-                                with p_col2:
-                                    a_str = st.text_input(f"{away}", value=init_a, placeholder=away[:3].upper(), max_chars=2, key=f"away_{match_id}", label_visibility="collapsed")
-                                
-                                predictions_input[match_id] = (h_str, a_str)
-
-                            elif is_finished:
-                                act_h, act_a = results_map.get(match_id, ("-", "-"))
-                                st.markdown("<span class='badge-ft'>FINAL RESULT</span>", unsafe_allow_html=True)
-                                st.markdown(f"""
-                                <div class="team-row" style="margin-top:8px;">
-                                    <div class="team-badge-container">
-                                        <img src="{home_crest}" class="team-crest" />
-                                        <span class="team-name">{home}</span>
+                            with cols[idx]:
+                                with st.container(border=True):
+                                    match_teams_html = f"""
+                                    <div class="team-row">
+                                        <div class="team-badge-container">
+                                            <img src="{home_crest}" class="team-crest" />
+                                            <span class="team-name">{home}</span>
+                                        </div>
+                                        <span style="color:#64748b; font-size:12px; font-weight:600;">vs</span>
+                                        <div class="team-badge-container">
+                                            <span class="team-name">{away}</span>
+                                            <img src="{away_crest}" class="team-crest" />
+                                        </div>
                                     </div>
-                                    <div style="font-size:18px; font-weight:800; color:#2563eb;">{act_h} - {act_a}</div>
-                                    <div class="team-badge-container">
-                                        <span class="team-name">{away}</span>
-                                        <img src="{away_crest}" class="team-crest" />
-                                    </div>
-                                </div>
-                                """, unsafe_allow_html=True)
-                                
-                                if saved_pred and saved_pred[0] != "" and saved_pred[1] != "":
-                                    pts = calculate_points(saved_pred[0], saved_pred[1], act_h, act_a)
-                                    badge_cls = "pts-badge-green" if pts is not None and pts > 0 else "pts-badge-red"
-                                    st.markdown(f"<div style='font-size:12px; color:#64748b; margin-top:4px;'>Your Pick: <code>{saved_pred[0]} - {saved_pred[1]}</code> • <span class='{badge_cls}'>+{pts} Pts</span></div>", unsafe_allow_html=True)
-                                else:
-                                    st.caption("Your Pick: *No prediction submitted*")
+                                    """
 
-                            else:
-                                st.markdown("<span class='badge-locked'>LOCKED</span>", unsafe_allow_html=True)
-                                st.markdown(match_teams_html, unsafe_allow_html=True)
-                                p_col1, p_col2 = st.columns(2)
-                                with p_col1:
-                                    val_h = saved_pred[0] if saved_pred else "-"
-                                    st.text_input(f"{home}", value=str(val_h), disabled=True, key=f"dis_h_{match_id}", label_visibility="collapsed")
-                                with p_col2:
-                                    val_a = saved_pred[1] if saved_pred else "-"
-                                    st.text_input(f"{away}", value=str(val_a), disabled=True, key=f"dis_a_{match_id}", label_visibility="collapsed")
+                                    if test_mode or (not is_finished and not kickoff_passed):
+                                        has_submittable = True
+                                        time_label = f" • {time_str}" if time_str else ""
+                                        st.markdown(f"<span class='badge-pending'>UPCOMING{time_label}</span>", unsafe_allow_html=True)
+                                        st.markdown(match_teams_html, unsafe_allow_html=True)
+                                        
+                                        init_h = str(saved_pred[0]) if saved_pred and saved_pred[0] is not None else ""
+                                        init_a = str(saved_pred[1]) if saved_pred and saved_pred[1] is not None else ""
+
+                                        p_col1, p_col2 = st.columns(2)
+                                        with p_col1:
+                                            h_str = st.text_input(f"{home}", value=init_h, placeholder="-", max_chars=2, key=f"home_{match_id}", label_visibility="collapsed")
+                                        with p_col2:
+                                            a_str = st.text_input(f"{away}", value=init_a, placeholder="-", max_chars=2, key=f"away_{match_id}", label_visibility="collapsed")
+                                        
+                                        predictions_input[match_id] = (h_str, a_str)
+
+                                    elif is_finished:
+                                        act_h, act_a = results_map.get(match_id, ("-", "-"))
+                                        st.markdown("<span class='badge-ft'>FINAL RESULT</span>", unsafe_allow_html=True)
+                                        st.markdown(f"""
+                                        <div class="team-row" style="margin-top:8px;">
+                                            <div class="team-badge-container">
+                                                <img src="{home_crest}" class="team-crest" />
+                                                <span class="team-name">{home}</span>
+                                            </div>
+                                            <div style="font-size:16px; font-weight:800; color:#2563eb;">{act_h} - {act_a}</div>
+                                            <div class="team-badge-container">
+                                                <span class="team-name">{away}</span>
+                                                <img src="{away_crest}" class="team-crest" />
+                                            </div>
+                                        </div>
+                                        """, unsafe_allow_html=True)
+                                        
+                                        if saved_pred and saved_pred[0] != "" and saved_pred[1] != "":
+                                            pts = calculate_points(saved_pred[0], saved_pred[1], act_h, act_a)
+                                            badge_cls = "pts-badge-green" if pts is not None and pts > 0 else "pts-badge-red"
+                                            st.markdown(f"<div style='font-size:11px; color:#64748b; margin-top:4px;'>Your Pick: <code>{saved_pred[0]} - {saved_pred[1]}</code> • <span class='{badge_cls}'>+{pts} Pts</span></div>", unsafe_allow_html=True)
+                                        else:
+                                            st.caption("Your Pick: *No prediction submitted*")
+
+                                    else:
+                                        st.markdown("<span class='badge-locked'>LOCKED</span>", unsafe_allow_html=True)
+                                        st.markdown(match_teams_html, unsafe_allow_html=True)
+                                        p_col1, p_col2 = st.columns(2)
+                                        with p_col1:
+                                            val_h = saved_pred[0] if saved_pred else "-"
+                                            st.text_input(f"{home}", value=str(val_h), disabled=True, key=f"dis_h_{match_id}", label_visibility="collapsed")
+                                        with p_col2:
+                                            val_a = saved_pred[1] if saved_pred else "-"
+                                            st.text_input(f"{away}", value=str(val_a), disabled=True, key=f"dis_a_{match_id}", label_visibility="collapsed")
 
                 st.markdown("<br>", unsafe_allow_html=True)
 
