@@ -23,10 +23,7 @@ TEAM_BADGES = {
     "brentford": "https://a.espncdn.com/i/teamlogos/soccer/500/337.png",
     "brighton": "https://a.espncdn.com/i/teamlogos/soccer/500/331.png",
     "brighton & hove albion": "https://a.espncdn.com/i/teamlogos/soccer/500/331.png",
-    "chelsea": "https://a.espncdn.com/i/teamlogos/soccer/500/363.png",
-    "https://upload.wikimedia.org/wikipedia/en/thumb/7/7b/Coventry_City_FC_crest.svg/512px-Coventry_City_FC_crest.svg.png"
-  
-    
+    "chelsea": "https://a.espncdn.com/i/teamlogos/soccer/500/363.png",    
     "crystal palace": "https://a.espncdn.com/i/teamlogos/soccer/500/384.png",
     "everton": "https://a.espncdn.com/i/teamlogos/soccer/500/368.png",
     "fulham": "https://a.espncdn.com/i/teamlogos/soccer/500/370.png",
