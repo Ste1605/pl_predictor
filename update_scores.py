@@ -9,7 +9,6 @@ SCOPE = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-# Pull credentials from environment variable or local file
 creds_json = os.environ.get("GOOGLE_CREDENTIALS")
 if creds_json:
     import json
@@ -20,10 +19,11 @@ else:
 
 client = gspread.authorize(creds)
 
-# Open the Google Sheet file and target the 'Fixtures' tab
-# Replace "PL Predictions" below with your exact Google Sheet filename if different
-spreadsheet_name = "PL Predictions" 
-sheet = client.open(spreadsheet_name).worksheet("Fixtures")
+# Exact File & Tab names from your Excel workbook
+FILE_NAME = "PL Predictions"
+TAB_NAME = "Fixtures Tab"
+
+sheet = client.open(FILE_NAME).worksheet(TAB_NAME)
 
 # 2. Football API Setup
 API_KEY = os.environ.get("FOOTBALL_DATA_API_KEY", "b4d7bcc9be7147d78e53c7f11c9ec283")
@@ -31,7 +31,6 @@ headers = {"X-Auth-Token": API_KEY}
 
 print("Fetching current matchday from Football API...")
 
-# Step A: Get current competition status to find the current matchday
 comp_url = "https://api.football-data.org/v4/competitions/PL"
 comp_res = requests.get(comp_url, headers=headers).json()
 
@@ -43,7 +42,7 @@ if not current_matchday:
 
 print(f"Current Gameweek/Matchday: {current_matchday}")
 
-# Step B: Fetch matches ONLY for the current matchday
+# Fetch matches ONLY for current matchday
 matches_url = f"https://api.football-data.org/v4/competitions/PL/matches?matchday={current_matchday}"
 matches_res = requests.get(matches_url, headers=headers).json()
 matches = matches_res.get("matches", [])
@@ -55,22 +54,24 @@ if not matches:
 # 3. Process Sheet Rows
 all_rows = sheet.get_all_values()
 
-# Create lookup map of existing rows in Google Sheet (Home Team + Away Team)
+# Existing fixtures map (Home Team in Col 2, Away Team in Col 3)
 existing_fixtures = {}
-for i, row in enumerate(all_rows[1:], start=2): # skip header row
-    if len(row) >= 2:
-        key = f"{row[0].strip().lower()} vs {row[1].strip().lower()}"
+for i, row in enumerate(all_rows[1:], start=2): # skip headers
+    if len(row) >= 3:
+        key = f"{row[1].strip().lower()} vs {row[2].strip().lower()}"
         existing_fixtures[key] = i
 
 new_rows_to_add = []
 updates_count = 0
 
 for m in matches:
+    match_id = str(m["id"])
     home_team = m["homeTeam"]["name"]
     away_team = m["awayTeam"]["name"]
-    status = m["status"]
+    kickoff_time = m.get("utcDate", "")
+    status = m.get("status", "SCHEDULED")
+    gameweek = f"GW{current_matchday}"
     
-    # Check if match is finished and extract score
     home_score = ""
     away_score = ""
     if status == "FINISHED":
@@ -79,26 +80,25 @@ for m in matches:
 
     fixture_key = f"{home_team.strip().lower()} vs {away_team.strip().lower()}"
 
-    # If fixture already exists in Google Sheet, update score if needed
     if fixture_key in existing_fixtures:
         row_num = existing_fixtures[fixture_key]
-        current_home_val = sheet.cell(row_num, 3).value if len(all_rows[row_num-1]) >= 3 else None
+        current_home_val = sheet.cell(row_num, 7).value if len(all_rows[row_num-1]) >= 7 else None
         
         if status == "FINISHED" and (current_home_val is None or current_home_val == ""):
-            sheet.update_cell(row_num, 3, home_score)
-            sheet.update_cell(row_num, 4, away_score)
+            sheet.update_cell(row_num, 7, home_score) # Actual Home Score (Col 7)
+            sheet.update_cell(row_num, 8, away_score) # Actual Away Score (Col 8)
+            sheet.update_cell(row_num, 9, status)     # Status (Col 9)
             print(f"Updated score: {home_team} {home_score} - {away_score} {away_team}")
             updates_count += 1
     else:
-        # If fixture is missing from Google Sheet, add it to new_rows list
-        new_rows_to_add.append([home_team, away_team, home_score, away_score, f"GW{current_matchday}"])
+        # Match ID, Home Team, Away Team, GameWeek, Kickoff Time, Deadline, Actual Home Score, Actual Away Score, Status
+        new_rows_to_add.append([match_id, home_team, away_team, gameweek, kickoff_time, "", home_score, away_score, status])
 
-# Append any missing fixtures for this current gameweek
 if new_rows_to_add:
     for new_row in new_rows_to_add:
         sheet.append_row(new_row)
-    print(f"Added {len(new_rows_to_add)} missing fixtures for Gameweek {current_matchday} to 'Fixtures' tab.")
+    print(f"Added {len(new_rows_to_add)} missing fixtures for Gameweek {current_matchday} to '{TAB_NAME}'.")
 else:
-    print(f"All Gameweek {current_matchday} fixtures already exist in 'Fixtures' tab.")
+    print(f"All Gameweek {current_matchday} fixtures already exist in '{TAB_NAME}'.")
 
 print(f"Finished. Total score updates made: {updates_count}")
