@@ -41,6 +41,10 @@ TEAM_BADGES = {
     "tottenham hotspur": "https://a.espncdn.com/i/teamlogos/soccer/500/367.png",
     "west ham united": "https://a.espncdn.com/i/teamlogos/soccer/500/371.png",
     "wolverhampton wanderers": "https://a.espncdn.com/i/teamlogos/soccer/500/380.png"
+
+    "coventry": "https://upload.wikimedia.org/wikipedia/en/thumb/7/7b/Coventry_City_FC_crest.svg/512px-Coventry_City_FC_crest.svg.png",
+    "coventry city": "https://upload.wikimedia.org/wikipedia/en/thumb/7/7b/Coventry_City_FC_crest.svg/512px-Coventry_City_FC_crest.svg.png",
+    
 }
 
 def get_badge_url(team_name):
