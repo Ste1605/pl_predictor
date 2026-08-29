@@ -69,19 +69,24 @@ for m in matches:
     match_id = str(m["id"])
     home_team = m["homeTeam"]["name"]
     away_team = m["awayTeam"]["name"]
-    kickoff_time = m.get("utcDate", "")
+    raw_kickoff = m.get("utcDate", "")
     status = m.get("status", "SCHEDULED")
     gameweek = f"GW{current_matchday}"
     
-    # Calculate Deadline (1 Hour Before Kickoff)
+    # Format Kickoff and Deadline to readable format (e.g., "28 Aug 2026, 19:00")
+    formatted_kickoff = ""
     deadline_str = ""
-    if kickoff_time:
+    
+    if raw_kickoff:
         try:
-            dt = datetime.fromisoformat(kickoff_time.replace("Z", "+00:00"))
+            dt = datetime.fromisoformat(raw_kickoff.replace("Z", "+00:00"))
+            formatted_kickoff = dt.strftime("%d %b %Y, %H:%M")
+            
             deadline_dt = dt - timedelta(hours=1)
-            deadline_str = deadline_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+            deadline_str = deadline_dt.strftime("%d %b %Y, %H:%M")
         except ValueError:
-            deadline_str = kickoff_time
+            formatted_kickoff = raw_kickoff
+            deadline_str = raw_kickoff
 
     home_score = ""
     away_score = ""
@@ -93,8 +98,17 @@ for m in matches:
 
     if fixture_key in existing_fixtures:
         row_num = existing_fixtures[fixture_key]
-        current_home_val = sheet.cell(row_num, 7).value if len(all_rows[row_num - 1]) >= 7 else None
+        row_data = all_rows[row_num - 1]
         
+        current_home_val = row_data[6] if len(row_data) >= 7 else ""
+        
+        # Always update formatted Kickoff and Deadline if present
+        if formatted_kickoff:
+            sheet.update_cell(row_num, 5, formatted_kickoff)
+        if deadline_str:
+            sheet.update_cell(row_num, 6, deadline_str)
+        
+        # Update finished match scores & status
         if status == "FINISHED" and (current_home_val is None or current_home_val == ""):
             sheet.update_cell(row_num, 7, home_score)  # Actual Home Score (Col 7)
             sheet.update_cell(row_num, 8, away_score)  # Actual Away Score (Col 8)
@@ -103,13 +117,13 @@ for m in matches:
             updates_count += 1
     else:
         # Match ID, Home Team, Away Team, GameWeek, Kickoff Time, Deadline, Actual Home Score, Actual Away Score, Status
-        new_rows_to_add.append([match_id, home_team, away_team, gameweek, kickoff_time, deadline_str, home_score, away_score, status])
+        new_rows_to_add.append([match_id, home_team, away_team, gameweek, formatted_kickoff, deadline_str, home_score, away_score, status])
 
 if new_rows_to_add:
     for new_row in new_rows_to_add:
         sheet.append_row(new_row)
     print(f"Added {len(new_rows_to_add)} missing fixtures for Gameweek {current_matchday} to '{TAB_NAME}'.")
 else:
-    print(f"All Gameweek {current_matchday} fixtures already exist in '{TAB_NAME}'.")
+    print(f"All Gameweek {current_matchday} fixtures processed in '{TAB_NAME}'.")
 
 print(f"Finished. Total score updates made: {updates_count}")
