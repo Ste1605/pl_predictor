@@ -52,49 +52,55 @@ def get_badge_url(team_name):
             return url
     return "https://a.espncdn.com/i/teamlogos/soccer/500/default-team-logo.png"
 
-# ------------------ STYLING (OPTION 3: CLEAN LIGHT MODE) ------------------
+# ------------------ STYLING (SOFT LIGHT SLATE) ------------------
 st.markdown("""
     <style>
+    /* Soft Light Slate Background */
     .stApp {
-        background-color: #f8f9fa;
-        color: #1a202c;
+        background-color: #f0f4f8;
+        color: #1e293b;
         max-width: 850px;
         margin: 0 auto;
     }
+    
+    /* Top Header Branding */
     .header-branding {
         display: flex;
         align-items: center;
         gap: 16px;
         margin-bottom: 24px;
         padding-bottom: 12px;
-        border-bottom: 2px solid #cbd5e0;
+        border-bottom: 2px solid #cbd5e1;
     }
     .header-branding img { height: 52px; width: auto; }
-    .header-branding h1 { font-size: 28px; font-weight: 800; margin: 0; color: #1a202c !important; }
+    .header-branding h1 { font-size: 28px; font-weight: 800; margin: 0; color: #0f172a !important; }
     
+    /* Soft Card Containers */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         background-color: #ffffff !important;
-        border: 1px solid #e2e8f0 !important;
+        border: 1px solid #cbd5e1 !important;
         border-radius: 12px !important;
         padding: 14px 16px !important;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     }
     div[data-testid="stVerticalBlockBorderWrapper"]:hover {
-        border-color: #3182ce !important;
+        border-color: #2563eb !important;
     }
 
-    .badge-ft { background: #3182ce; color: #ffffff; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
-    .badge-locked { background-color: #edf2f7; color: #718096; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
-    .badge-pending { background-color: #ebf8ff; color: #2b6cb0; border: 1px solid #bee3f8; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+    /* Status Badges */
+    .badge-ft { background: #2563eb; color: #ffffff; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+    .badge-locked { background-color: #e2e8f0; color: #64748b; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+    .badge-pending { background-color: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
     
-    .pts-badge-green { color: #276749; font-weight: 700; background: #c6f6d5; padding: 3px 8px; border-radius: 6px; }
-    .pts-badge-red { color: #9b2c2c; font-weight: 700; background: #fed7d7; padding: 3px 8px; border-radius: 6px; }
+    .pts-badge-green { color: #166534; font-weight: 700; background: #dcfce7; padding: 3px 8px; border-radius: 6px; }
+    .pts-badge-red { color: #991b1b; font-weight: 700; background: #fee2e2; padding: 3px 8px; border-radius: 6px; }
 
+    /* Team Names & Day Headers */
     .team-row { display: flex; align-items: center; justify-content: space-between; margin: 8px 0; }
     .team-badge-container { display: flex; align-items: center; gap: 8px; }
     .team-crest { width: 22px; height: 22px; object-fit: contain; }
-    .team-name { font-size: 14px; font-weight: 700; color: #2d3748 !important; }
-    .day-header { font-size: 13px; font-weight: 700; color: #2b6cb0; text-transform: uppercase; margin-top: 18px; margin-bottom: 8px; border-bottom: 1px solid #e2e8f0; }
+    .team-name { font-size: 14px; font-weight: 700; color: #1e293b !important; }
+    .day-header { font-size: 13px; font-weight: 700; color: #1d4ed8; text-transform: uppercase; margin-top: 18px; margin-bottom: 8px; border-bottom: 1px solid #cbd5e1; }
     </style>
 """, unsafe_allow_html=True)
 
