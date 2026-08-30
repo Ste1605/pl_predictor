@@ -265,7 +265,20 @@ try:
         with top_c2:
             test_mode = st.toggle("🧪 Test Mode", value=False)
         
-        user_name = st.text_input("Player Name / Email:", value="", placeholder="Enter your name...").strip()
+        # --- Persistent Name Logic ---
+        query_params = st.query_params
+        default_name = query_params.get("player", "")
+        
+        user_name = st.text_input(
+            "Player Name / Email:", 
+            value=default_name, 
+            placeholder="Enter your name...",
+            key="player_name_input"
+        ).strip()
+        
+        # Automatically update URL parameter when name is entered so it can be bookmarked/saved
+        if user_name and query_params.get("player") != user_name:
+            st.query_params["player"] = user_name
 
         gw_list = [str(m.get("GameWeek")).strip() for m in fixtures if m.get("GameWeek")]
         gameweeks = sorted(list(set(gw_list)), key=lambda x: int(x.replace("GW", "")) if x.replace("GW", "").isdigit() else x)
