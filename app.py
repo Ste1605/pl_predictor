@@ -154,7 +154,7 @@ def show_confirmation_modal(user_name, predictions_dict, selected_gw):
         })
     
     st.dataframe(pd.DataFrame(summary_data), hide_index=True, use_container_width=True)
-    st.success("Your picks are safely locked in Google Sheets!")
+    st.success("Your picks are safely locked in - Good Luck!")
     if st.button("Close", use_container_width=True):
         st.rerun()
 
