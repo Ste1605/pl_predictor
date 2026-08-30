@@ -123,12 +123,12 @@ st.markdown("""
         font-weight: 700 !important;
         font-size: 16px !important;
         color: #0f172a !important;
-        background-color: #f8fafc !important;
+        background-color: #ffffff !important;
         border-radius: 8px !important;
     }
 
     .badge-ft { background: #2563eb; color: #ffffff; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
-    .badge-locked { background-color: #cbd5e1; color: #475569; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+    .badge-locked { background-color: #94a3b8; color: #ffffff; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
     .badge-pending { background-color: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
     .badge-saved { background-color: #dcfce7; color: #15803d; border: 1px solid #86efac; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
     
@@ -261,7 +261,7 @@ try:
         with top_c2:
             test_mode = st.toggle("🧪 Test Mode", value=False)
         
-        # --- Item 1: Persistent Name Logic ---
+        # --- Persistent Name Logic ---
         query_params = st.query_params
         default_name = query_params.get("player", "")
         
@@ -281,7 +281,7 @@ try:
         if not gameweeks:
             st.error("No Gameweeks found in sheet.")
         else:
-            # --- Item 2: Auto-detect Next Active Gameweek ---
+            # --- Auto-detect Next Active Gameweek ---
             default_gw = gameweeks[0]
             for gw in gameweeks:
                 gw_matches = [m for m in fixtures if str(m.get("GameWeek", "")).strip() == str(gw).strip()]
@@ -338,23 +338,24 @@ try:
                             saved_pred = user_preds_map.get(user_key) if user_key else None
                             has_saved = saved_pred is not None and str(saved_pred[0]).strip() != "" and str(saved_pred[1]).strip() != ""
 
-                            # --- Item 4: Dynamic Card Colors ---
+                            # --- Dynamic Card Background Colors ---
                             card_bg = "#ffffff"
                             card_border = "#cbd5e1"
                             
                             if is_finished or kickoff_passed:
-                                card_bg = "#f1f5f9"
-                                card_border = "#94a3b8"
+                                card_bg = "#e2e8f0"  # Light Grey for locked/passed/finished matches
+                                card_border = "#cbd5e1"
                             elif has_saved:
-                                card_border = "#22c55e"
+                                card_bg = "#f0fdf4"  # Light Pastel Green for saved predictions
+                                card_border = "#bbf7d0"
 
                             with cols[idx]:
-                                # Inline style wrapper to color card containers dynamically
+                                # CSS targeting the specific wrapper element to change background color
                                 st.markdown(f"""
                                     <style>
                                     div[data-testid="stVerticalBlockBorderWrapper"]:has(#card_{match_id}) {{
                                         background-color: {card_bg} !important;
-                                        border: 2px solid {card_border} !important;
+                                        border: 1px solid {card_border} !important;
                                     }}
                                     </style>
                                     <div id="card_{match_id}"></div>
