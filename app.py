@@ -141,6 +141,23 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
+# --- Submission Confirmation Modal ---
+@st.dialog("🎉 Predictions Saved!")
+def show_confirmation_modal(user_name, predictions_dict):
+    st.write(f"Great job, **{user_name}**! Here is a summary of your saved predictions:")
+    
+    summary_data = []
+    for m_id, (h_val, a_val) in predictions_dict.items():
+        summary_data.append({
+            "Match ID": m_id,
+            "Your Pick": f"{h_val} - {a_val}"
+        })
+    
+    st.dataframe(pd.DataFrame(summary_data), hide_index=True, use_container_width=True)
+    st.success("Your picks are safely locked in Google Sheets!")
+    if st.button("Close", use_container_width=True):
+        st.rerun()
+
 # ------------------ AUTHENTICATION & CONFIG ------------------
 @st.cache_resource
 def get_gsheet():
@@ -482,8 +499,9 @@ try:
                                     if rows_to_append:
                                         predictions_sheet.append_rows(rows_to_append)
 
-                                    st.success(f"🎉 Predictions saved! ({updated_count} updated, {added_count} new)")
+                                    st.toast("🎉 Predictions saved successfully!", icon="⚽")
                                     st.cache_resource.clear()
+                                    show_confirmation_modal(user_name, parsed_predictions)
                 else:
                     st.form_submit_button("🔒 Predictions Closed", disabled=True, use_container_width=True)
 
