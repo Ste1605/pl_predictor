@@ -118,10 +118,10 @@ st.markdown("""
         border-radius: 8px !important;
     }
 
-    .badge-ft { background: #2563eb; color: #ffffff; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
-    .badge-locked { background-color: #94a3b8; color: #ffffff; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
-    .badge-pending { background-color: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
-    .badge-saved { background-color: #dcfce7; color: #15803d; border: 1px solid #86efac; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+    .badge-ft { background: #2563eb; color: #ffffff; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; display: inline-block; }
+    .badge-locked { background-color: #94a3b8; color: #ffffff; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; display: inline-block; }
+    .badge-pending { background-color: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; display: inline-block; }
+    .badge-saved { background-color: #dcfce7; color: #15803d; border: 1px solid #86efac; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; display: inline-block; }
     
     .pts-badge-green { color: #166534; font-weight: 700; background: #dcfce7; padding: 3px 8px; border-radius: 6px; }
     .pts-badge-red { color: #991b1b; font-weight: 700; background: #fee2e2; padding: 3px 8px; border-radius: 6px; }
@@ -154,7 +154,7 @@ def show_confirmation_modal(user_name, predictions_dict, selected_gw):
         })
     
     st.dataframe(pd.DataFrame(summary_data), hide_index=True, use_container_width=True)
-    st.success("Your picks are safely locked in - Good Luck!")
+    st.success("Your picks are safely locked in Google Sheets!")
     if st.button("Close", use_container_width=True):
         st.rerun()
 
@@ -346,23 +346,18 @@ try:
                             saved_pred = user_preds_map.get(user_key) if user_key else None
                             has_saved = saved_pred is not None and str(saved_pred[0]).strip() != "" and str(saved_pred[1]).strip() != ""
 
-                            # --- Dynamic Card Background Styling ---
+                            # --- Dynamic Card Colors & Borders ---
                             card_bg = "#ffffff"
                             card_border = "#cbd5e1"
                             
                             if is_finished or kickoff_passed:
-                                card_bg = "#e2e8f0"  # Light Grey for locked/passed/finished matches
-                                card_border = "#cbd5e1"
+                                card_bg = "#e2e8f0"  # Solid Light Grey
+                                card_border = "#94a3b8"  # Slate Border
                             elif has_saved:
-                                card_bg = "#f0fdf4"  # Light Green for saved predictions
-                                card_border = "#86efac"
+                                card_bg = "#f0fdf4"  # Pastel Green
+                                card_border = "#86efac"  # Soft Green Border
 
                             with cols[idx]:
-                                # HTML container wrapper to guarantee background color rendering
-                                st.markdown(f"""
-                                <div style="background-color: {card_bg}; border: 1px solid {card_border}; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
-                                """, unsafe_allow_html=True)
-
                                 match_teams_html = f"""
                                 <div class="team-row">
                                     <div class="team-badge-container">
@@ -381,15 +376,16 @@ try:
                                     has_submittable = True
                                     time_label = f" • {time_str}" if time_str else ""
                                     
-                                    if has_saved:
-                                        st.markdown(f"<span class='badge-saved'>SAVED{time_label}</span>", unsafe_allow_html=True)
-                                    else:
-                                        st.markdown(f"<span class='badge-pending'>UPCOMING{time_label}</span>", unsafe_allow_html=True)
+                                    badge_html = f"<span class='badge-saved'>SAVED{time_label}</span>" if has_saved else f"<span class='badge-pending'>UPCOMING{time_label}</span>"
 
-                                    st.markdown(match_teams_html, unsafe_allow_html=True)
-                                    
                                     init_h = str(saved_pred[0]) if saved_pred and saved_pred[0] is not None else ""
                                     init_a = str(saved_pred[1]) if saved_pred and saved_pred[1] is not None else ""
+
+                                    st.markdown(f"""
+                                    <div style="background-color: {card_bg}; border: 1.5px solid {card_border}; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
+                                        {badge_html}
+                                        {match_teams_html}
+                                    """, unsafe_allow_html=True)
 
                                     p_col1, p_col2 = st.columns(2)
                                     with p_col1:
@@ -397,44 +393,49 @@ try:
                                     with p_col2:
                                         a_str = st.text_input(f"{away}", value=init_a, placeholder="-", max_chars=2, key=f"away_{match_id}", label_visibility="collapsed")
                                     
+                                    st.markdown("</div>", unsafe_allow_html=True)
                                     predictions_input[match_id] = (h_str, a_str)
 
                                 elif is_finished:
                                     act_h, act_a = results_map.get(match_id, ("-", "-"))
-                                    st.markdown("<span class='badge-ft'>FINAL RESULT</span>", unsafe_allow_html=True)
-                                    st.markdown(f"""
-                                    <div class="team-row" style="margin-top:8px;">
-                                        <div class="team-badge-container">
-                                            <img src="{home_crest}" class="team-crest" />
-                                            <span class="team-name">{home}</span>
-                                        </div>
-                                        <div style="font-size:16px; font-weight:800; color:#2563eb;">{act_h} - {act_a}</div>
-                                        <div class="team-badge-container">
-                                            <span class="team-name">{away}</span>
-                                            <img src="{away_crest}" class="team-crest" />
-                                        </div>
-                                    </div>
-                                    """, unsafe_allow_html=True)
                                     
+                                    pick_html = ""
                                     if saved_pred and saved_pred[0] != "" and saved_pred[1] != "":
                                         pts = calculate_points(saved_pred[0], saved_pred[1], act_h, act_a)
                                         badge_cls = "pts-badge-green" if pts is not None and pts > 0 else "pts-badge-red"
-                                        st.markdown(f"<div style='font-size:11px; color:#64748b; margin-top:4px;'>Your Pick: <code>{saved_pred[0]} - {saved_pred[1]}</code> • <span class='{badge_cls}'>+{pts} Pts</span></div>", unsafe_allow_html=True)
+                                        pick_html = f"<div style='font-size:12px; color:#475569; margin-top:6px;'>Your Pick: <b>{saved_pred[0]} - {saved_pred[1]}</b> • <span class='{badge_cls}'>+{pts} Pts</span></div>"
                                     else:
-                                        st.caption("Your Pick: *No prediction submitted*")
+                                        pick_html = "<div style='font-size:12px; color:#64748b; margin-top:6px;'>Your Pick: <i>No prediction submitted</i></div>"
+
+                                    st.markdown(f"""
+                                    <div style="background-color: {card_bg}; border: 1.5px solid {card_border}; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
+                                        <div><span class='badge-ft'>FINAL RESULT</span></div>
+                                        <div class="team-row" style="margin-top:8px;">
+                                            <div class="team-badge-container">
+                                                <img src="{home_crest}" class="team-crest" />
+                                                <span class="team-name">{home}</span>
+                                            </div>
+                                            <div style="font-size:16px; font-weight:800; color:#2563eb;">{act_h} - {act_a}</div>
+                                            <div class="team-badge-container">
+                                                <span class="team-name">{away}</span>
+                                                <img src="{away_crest}" class="team-crest" />
+                                            </div>
+                                        </div>
+                                        {pick_html}
+                                    </div>
+                                    """, unsafe_allow_html=True)
 
                                 else:
-                                    st.markdown("<span class='badge-locked'>LOCKED</span>", unsafe_allow_html=True)
-                                    st.markdown(match_teams_html, unsafe_allow_html=True)
-                                    p_col1, p_col2 = st.columns(2)
-                                    with p_col1:
-                                        val_h = saved_pred[0] if saved_pred else "-"
-                                        st.text_input(f"{home}", value=str(val_h), disabled=True, key=f"dis_h_{match_id}", label_visibility="collapsed")
-                                    with p_col2:
-                                        val_a = saved_pred[1] if saved_pred else "-"
-                                        st.text_input(f"{away}", value=str(val_a), disabled=True, key=f"dis_a_{match_id}", label_visibility="collapsed")
-
-                                st.markdown("</div>", unsafe_allow_html=True)
+                                    val_h = saved_pred[0] if saved_pred and saved_pred[0] != "" else "-"
+                                    val_a = saved_pred[1] if saved_pred and saved_pred[1] != "" else "-"
+                                    
+                                    st.markdown(f"""
+                                    <div style="background-color: {card_bg}; border: 1.5px solid {card_border}; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
+                                        <div><span class='badge-locked'>LOCKED</span></div>
+                                        {match_teams_html}
+                                        <div style='font-size:12px; color:#475569; margin-top:6px;'>Your Pick: <b>{val_h} - {val_a}</b></div>
+                                    </div>
+                                    """, unsafe_allow_html=True)
 
                 st.markdown("<br>", unsafe_allow_html=True)
 
