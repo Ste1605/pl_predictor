@@ -118,6 +118,23 @@ st.markdown("""
         border-radius: 8px !important;
     }
 
+    /* Force Save Predictions Button Text to be Visible on Mobile */
+    div[data-testid="stFormSubmitButton"] button {
+        background-color: #2563eb !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        font-size: 16px !important;
+        border-radius: 8px !important;
+        border: none !important;
+    }
+    div[data-testid="stFormSubmitButton"] button p {
+        color: #ffffff !important;
+    }
+    div[data-testid="stFormSubmitButton"] button:hover {
+        background-color: #1d4ed8 !important;
+        color: #ffffff !important;
+    }
+
     .badge-ft { background: #2563eb; color: #ffffff; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; display: inline-block; }
     .badge-locked { background-color: #94a3b8; color: #ffffff; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; display: inline-block; }
     .badge-pending { background-color: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; display: inline-block; }
