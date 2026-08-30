@@ -1,6 +1,5 @@
 import os
 import streamlit as st
-import streamlit.components.v1 as components
 import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
@@ -16,7 +15,7 @@ st.set_page_config(
 # Premier League Header Logo URL
 PL_LOGO_URL = "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg"
 
-# Premier League Official Team Badge Directory (Reliable PNG CDN Links)
+# Premier League Official Team Badge Directory
 TEAM_BADGES = {
     "arsenal": "https://a.espncdn.com/i/teamlogos/soccer/500/359.png",
     "aston villa": "https://a.espncdn.com/i/teamlogos/soccer/500/362.png",
@@ -110,6 +109,7 @@ st.markdown("""
     .header-branding img { height: 52px; width: auto; }
     .header-branding h1 { font-size: 28px; font-weight: 800; margin: 0; color: #0f172a !important; }
 
+    /* Dark Text Overrides for Mobile/Dark Mode */
     button[data-baseweb="tab"] { color: #0f172a !important; font-weight: 700 !important; }
     button[data-baseweb="tab"] p { color: #0f172a !important; font-weight: 700 !important; }
 
@@ -117,15 +117,20 @@ st.markdown("""
     div[data-testid="stWidgetLabel"] label p,
     label p { color: #0f172a !important; font-weight: 700 !important; }
 
+    .stTextInput input, .stSelectbox div {
+        font-weight: 700 !important;
+        color: #0f172a !important;
+    }
+
+    /* Force Centered Inputs */
     .stTextInput input {
         text-align: center !important;
-        font-weight: 700 !important;
         font-size: 16px !important;
-        color: #0f172a !important;
         background-color: #ffffff !important;
         border-radius: 8px !important;
     }
 
+    /* Save Predictions Button Mobile Fix */
     div[data-testid="stFormSubmitButton"] button {
         background-color: #2563eb !important;
         color: #ffffff !important;
@@ -274,13 +279,18 @@ try:
                 pass
 
     user_preds_map = {}
+    known_users = set()
     for p in raw_preds:
         m_id = str(p.get("Match ID", "")).strip()
-        user = str(p.get("User ID", "") or p.get("User", "") or p.get("Name", "")).strip().lower()
+        user = str(p.get("User ID", "") or p.get("User", "") or p.get("Name", "")).strip()
         p_home = p.get("Predicted Home", p.get("Predicted Home Score", p.get("Home Score", "")))
         p_away = p.get("Predicted Away", p.get("Predicted Away Score", p.get("Away Score", "")))
-        if m_id and user:
-            user_preds_map[(m_id, user)] = (p_home, p_away)
+        if user:
+            known_users.add(user)
+            if m_id:
+                user_preds_map[(m_id, user.lower())] = (p_home, p_away)
+
+    user_list = sorted(list(known_users))
 
     # ------------------ TAB 1: PREDICTIONS ------------------
     with tab_predict:
@@ -288,38 +298,20 @@ try:
         with top_c2:
             test_mode = st.toggle("🧪 Test Mode", value=False)
         
-        # --- Local Storage Name Persistence ---
-        if "saved_user_name" not in st.session_state:
-            query_params = st.query_params
-            st.session_state.saved_user_name = query_params.get("player", "")
-
-        user_name = st.text_input(
-            "Player Name / Email:", 
-            value=st.session_state.saved_user_name, 
-            placeholder="Enter your name...",
-            key="player_name_input"
-        ).strip()
-
-        # JavaScript injection to store name in phone LocalStorage
-        if user_name:
-            st.session_state.saved_user_name = user_name
-            st.query_params["player"] = user_name
-            components.html(f"""
-                <script>
-                    localStorage.setItem("pl_predictor_user", "{user_name}");
-                </script>
-            """, height=0)
-        else:
-            components.html("""
-                <script>
-                    const savedName = localStorage.getItem("pl_predictor_user");
-                    if (savedName && !window.location.search.includes("player=")) {
-                        const url = new URL(window.location.href);
-                        url.searchParams.set("player", savedName);
-                        window.location.href = url.href;
-                    }
-                </script>
-            """, height=0)
+        # --- Player Selection Dropdown & New Player Input ---
+        p_col1, p_col2 = st.columns([2, 1])
+        with p_col1:
+            if user_list:
+                options = ["-- Select Name --"] + user_list + ["+ Add New Player"]
+                selected_user = st.selectbox("Player Name:", options, key="player_select")
+                if selected_user == "+ Add New Player":
+                    user_name = st.text_input("Enter New Name:", placeholder="Type name...", key="new_player_input").strip()
+                elif selected_user != "-- Select Name --":
+                    user_name = selected_user
+                else:
+                    user_name = ""
+            else:
+                user_name = st.text_input("Player Name:", placeholder="Enter your name...", key="player_text_input").strip()
 
         gw_list = [str(m.get("GameWeek")).strip() for m in fixtures if m.get("GameWeek")]
         gameweeks = sorted(list(set(gw_list)), key=lambda x: int(x.replace("GW", "")) if x.replace("GW", "").isdigit() else x)
@@ -480,7 +472,7 @@ try:
 
                     if submit_all_btn:
                         if not user_name:
-                            st.error("❌ Please enter your player name at the top before submitting!")
+                            st.error("❌ Please select or enter your player name at the top before submitting!")
                         else:
                             parsed_predictions = {}
                             has_invalid = False
