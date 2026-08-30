@@ -143,13 +143,13 @@ st.markdown(f"""
 
 # --- Submission Confirmation Modal ---
 @st.dialog("🎉 Predictions Saved!")
-def show_confirmation_modal(user_name, predictions_dict):
-    st.write(f"Great job, **{user_name}**! Here is a summary of your saved predictions:")
+def show_confirmation_modal(user_name, predictions_dict, selected_gw):
+    st.write(f"Great job, **{user_name}**! Here is a summary of your saved predictions for **{selected_gw}**:")
     
     summary_data = []
-    for m_id, (h_val, a_val) in predictions_dict.items():
+    for idx, (m_id, (h_val, a_val)) in enumerate(predictions_dict.items(), start=1):
         summary_data.append({
-            "Match ID": m_id,
+            "Match": f"{selected_gw} - Match {idx}",
             "Your Pick": f"{h_val} - {a_val}"
         })
     
@@ -501,7 +501,7 @@ try:
 
                                     st.toast("🎉 Predictions saved successfully!", icon="⚽")
                                     st.cache_resource.clear()
-                                    show_confirmation_modal(user_name, parsed_predictions)
+                                    show_confirmation_modal(user_name, parsed_predictions, selected_gw)
                 else:
                     st.form_submit_button("🔒 Predictions Closed", disabled=True, use_container_width=True)
 
