@@ -41,10 +41,8 @@ TEAM_BADGES = {
     "tottenham hotspur": "https://a.espncdn.com/i/teamlogos/soccer/500/367.png",
     "west ham united": "https://a.espncdn.com/i/teamlogos/soccer/500/371.png",
     "wolverhampton wanderers": "https://a.espncdn.com/i/teamlogos/soccer/500/380.png",
-
-"coventry": "https://upload.wikimedia.org/wikipedia/en/thumb/7/7b/Coventry_City_FC_crest.svg/250px-Coventry_City_FC_crest.svg.png",
+    "coventry": "https://upload.wikimedia.org/wikipedia/en/thumb/7/7b/Coventry_City_FC_crest.svg/250px-Coventry_City_FC_crest.svg.png",
     "coventry city": "https://upload.wikimedia.org/wikipedia/en/thumb/7/7b/Coventry_City_FC_crest.svg/250px-Coventry_City_FC_crest.svg.png"
-    
 }
 
 def get_badge_url(team_name):
@@ -90,7 +88,7 @@ def get_short_name(team_name):
     clean = str(team_name).strip()
     return SHORT_TEAM_NAMES.get(clean, clean)
 
-# ------------------ STYLING (SOFT SLATE LIGHT MODE & CENTERED INPUTS) ------------------
+# ------------------ STYLING ------------------
 st.markdown("""
     <style>
     .stApp {
@@ -118,9 +116,6 @@ st.markdown("""
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         margin-bottom: 10px;
     }
-    div[data-testid="stVerticalBlockBorderWrapper"]:hover {
-        border-color: #2563eb !important;
-    }
 
     /* Force Centered & Bold Numbers Inside Score Fields */
     .stTextInput input {
@@ -133,8 +128,9 @@ st.markdown("""
     }
 
     .badge-ft { background: #2563eb; color: #ffffff; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
-    .badge-locked { background-color: #e2e8f0; color: #64748b; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+    .badge-locked { background-color: #cbd5e1; color: #475569; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
     .badge-pending { background-color: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+    .badge-saved { background-color: #dcfce7; color: #15803d; border: 1px solid #86efac; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
     
     .pts-badge-green { color: #166534; font-weight: 700; background: #dcfce7; padding: 3px 8px; border-radius: 6px; }
     .pts-badge-red { color: #991b1b; font-weight: 700; background: #fee2e2; padding: 3px 8px; border-radius: 6px; }
@@ -265,7 +261,7 @@ try:
         with top_c2:
             test_mode = st.toggle("🧪 Test Mode", value=False)
         
-        # --- Persistent Name Logic ---
+        # --- Item 1: Persistent Name Logic ---
         query_params = st.query_params
         default_name = query_params.get("player", "")
         
@@ -276,7 +272,6 @@ try:
             key="player_name_input"
         ).strip()
         
-        # Automatically update URL parameter when name is entered so it can be bookmarked/saved
         if user_name and query_params.get("player") != user_name:
             st.query_params["player"] = user_name
 
@@ -286,7 +281,21 @@ try:
         if not gameweeks:
             st.error("No Gameweeks found in sheet.")
         else:
-            selected_gw = st.selectbox("Gameweek:", gameweeks)
+            # --- Item 2: Auto-detect Next Active Gameweek ---
+            default_gw = gameweeks[0]
+            for gw in gameweeks:
+                gw_matches = [m for m in fixtures if str(m.get("GameWeek", "")).strip() == str(gw).strip()]
+                has_unfinished = any(
+                    str(m.get("Status", "")).strip().upper() not in ["FINISHED", "PAUSED"] 
+                    and not is_kickoff_passed(m.get("Kickoff Time", ""))
+                    for m in gw_matches
+                )
+                if has_unfinished:
+                    default_gw = gw
+                    break
+
+            default_idx = gameweeks.index(default_gw) if default_gw in gameweeks else 0
+            selected_gw = st.selectbox("Gameweek:", gameweeks, index=default_idx)
             filtered_fixtures = [m for m in fixtures if str(m.get("GameWeek", "")).strip() == str(selected_gw).strip()]
 
             with st.form(key=f"gw_form_{selected_gw}_test_{test_mode}", clear_on_submit=False):
@@ -303,7 +312,6 @@ try:
                 for day_str, matches in grouped_fixtures.items():
                     st.markdown(f"<div class='day-header'>📅 {day_str}</div>", unsafe_allow_html=True)
                     
-                    # Render matches in side-by-side pairs (2 columns wide)
                     for i in range(0, len(matches), 2):
                         pair = matches[i:i+2]
                         cols = st.columns(2)
@@ -328,8 +336,30 @@ try:
                             
                             user_key = (match_id, user_name.lower()) if user_name else None
                             saved_pred = user_preds_map.get(user_key) if user_key else None
+                            has_saved = saved_pred is not None and str(saved_pred[0]).strip() != "" and str(saved_pred[1]).strip() != ""
+
+                            # --- Item 4: Dynamic Card Colors ---
+                            card_bg = "#ffffff"
+                            card_border = "#cbd5e1"
+                            
+                            if is_finished or kickoff_passed:
+                                card_bg = "#f1f5f9"
+                                card_border = "#94a3b8"
+                            elif has_saved:
+                                card_border = "#22c55e"
 
                             with cols[idx]:
+                                # Inline style wrapper to color card containers dynamically
+                                st.markdown(f"""
+                                    <style>
+                                    div[data-testid="stVerticalBlockBorderWrapper"]:has(#card_{match_id}) {{
+                                        background-color: {card_bg} !important;
+                                        border: 2px solid {card_border} !important;
+                                    }}
+                                    </style>
+                                    <div id="card_{match_id}"></div>
+                                """, unsafe_allow_html=True)
+
                                 with st.container(border=True):
                                     match_teams_html = f"""
                                     <div class="team-row">
@@ -348,7 +378,12 @@ try:
                                     if test_mode or (not is_finished and not kickoff_passed):
                                         has_submittable = True
                                         time_label = f" • {time_str}" if time_str else ""
-                                        st.markdown(f"<span class='badge-pending'>UPCOMING{time_label}</span>", unsafe_allow_html=True)
+                                        
+                                        if has_saved:
+                                            st.markdown(f"<span class='badge-saved'>SAVED{time_label}</span>", unsafe_allow_html=True)
+                                        else:
+                                            st.markdown(f"<span class='badge-pending'>UPCOMING{time_label}</span>", unsafe_allow_html=True)
+
                                         st.markdown(match_teams_html, unsafe_allow_html=True)
                                         
                                         init_h = str(saved_pred[0]) if saved_pred and saved_pred[0] is not None else ""
