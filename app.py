@@ -1,5 +1,6 @@
 import os
 import streamlit as st
+import streamlit.components.v1 as components
 import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
@@ -92,11 +93,12 @@ def get_short_name(team_name):
 st.markdown("""
     <style>
     .stApp {
-        background-color: #f0f4f8;
-        color: #1e293b;
+        background-color: #f0f4f8 !important;
+        color: #1e293b !important;
         max-width: 850px;
         margin: 0 auto;
     }
+
     .header-branding {
         display: flex;
         align-items: center;
@@ -108,7 +110,13 @@ st.markdown("""
     .header-branding img { height: 52px; width: auto; }
     .header-branding h1 { font-size: 28px; font-weight: 800; margin: 0; color: #0f172a !important; }
 
-    /* Force Centered & Bold Numbers Inside Score Fields */
+    button[data-baseweb="tab"] { color: #0f172a !important; font-weight: 700 !important; }
+    button[data-baseweb="tab"] p { color: #0f172a !important; font-weight: 700 !important; }
+
+    div[data-testid="stCheckbox"] label p,
+    div[data-testid="stWidgetLabel"] label p,
+    label p { color: #0f172a !important; font-weight: 700 !important; }
+
     .stTextInput input {
         text-align: center !important;
         font-weight: 700 !important;
@@ -118,7 +126,6 @@ st.markdown("""
         border-radius: 8px !important;
     }
 
-    /* Force Save Predictions Button Text to be Visible on Mobile */
     div[data-testid="stFormSubmitButton"] button {
         background-color: #2563eb !important;
         color: #ffffff !important;
@@ -127,27 +134,22 @@ st.markdown("""
         border-radius: 8px !important;
         border: none !important;
     }
-    div[data-testid="stFormSubmitButton"] button p {
-        color: #ffffff !important;
-    }
-    div[data-testid="stFormSubmitButton"] button:hover {
-        background-color: #1d4ed8 !important;
-        color: #ffffff !important;
-    }
+    div[data-testid="stFormSubmitButton"] button p { color: #ffffff !important; }
+    div[data-testid="stFormSubmitButton"] button:hover { background-color: #1d4ed8 !important; color: #ffffff !important; }
 
-    .badge-ft { background: #2563eb; color: #ffffff; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; display: inline-block; }
-    .badge-locked { background-color: #94a3b8; color: #ffffff; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; display: inline-block; }
-    .badge-pending { background-color: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; display: inline-block; }
-    .badge-saved { background-color: #dcfce7; color: #15803d; border: 1px solid #86efac; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; display: inline-block; }
+    .badge-ft { background: #2563eb; color: #ffffff !important; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; display: inline-block; }
+    .badge-locked { background-color: #94a3b8; color: #ffffff !important; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; display: inline-block; }
+    .badge-pending { background-color: #dbeafe; color: #1e40af !important; border: 1px solid #bfdbfe; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; display: inline-block; }
+    .badge-saved { background-color: #dcfce7; color: #15803d !important; border: 1px solid #86efac; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; display: inline-block; }
     
-    .pts-badge-green { color: #166534; font-weight: 700; background: #dcfce7; padding: 3px 8px; border-radius: 6px; }
-    .pts-badge-red { color: #991b1b; font-weight: 700; background: #fee2e2; padding: 3px 8px; border-radius: 6px; }
+    .pts-badge-green { color: #166534 !important; font-weight: 700; background: #dcfce7; padding: 3px 8px; border-radius: 6px; }
+    .pts-badge-red { color: #991b1b !important; font-weight: 700; background: #fee2e2; padding: 3px 8px; border-radius: 6px; }
 
     .team-row { display: flex; align-items: center; justify-content: space-between; margin: 8px 0; }
     .team-badge-container { display: flex; align-items: center; gap: 8px; }
     .team-crest { width: 22px; height: 22px; object-fit: contain; }
     .team-name { font-size: 14px; font-weight: 700; color: #1e293b !important; white-space: nowrap; }
-    .day-header { font-size: 13px; font-weight: 700; color: #1d4ed8; text-transform: uppercase; margin-top: 18px; margin-bottom: 8px; border-bottom: 1px solid #cbd5e1; }
+    .day-header { font-size: 13px; font-weight: 700; color: #1d4ed8 !important; text-transform: uppercase; margin-top: 18px; margin-bottom: 8px; border-bottom: 1px solid #cbd5e1; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -286,19 +288,38 @@ try:
         with top_c2:
             test_mode = st.toggle("🧪 Test Mode", value=False)
         
-        # --- Persistent Name Logic ---
-        query_params = st.query_params
-        default_name = query_params.get("player", "")
-        
+        # --- Local Storage Name Persistence ---
+        if "saved_user_name" not in st.session_state:
+            query_params = st.query_params
+            st.session_state.saved_user_name = query_params.get("player", "")
+
         user_name = st.text_input(
             "Player Name / Email:", 
-            value=default_name, 
+            value=st.session_state.saved_user_name, 
             placeholder="Enter your name...",
             key="player_name_input"
         ).strip()
-        
-        if user_name and query_params.get("player") != user_name:
+
+        # JavaScript injection to store name in phone LocalStorage
+        if user_name:
+            st.session_state.saved_user_name = user_name
             st.query_params["player"] = user_name
+            components.html(f"""
+                <script>
+                    localStorage.setItem("pl_predictor_user", "{user_name}");
+                </script>
+            """, height=0)
+        else:
+            components.html("""
+                <script>
+                    const savedName = localStorage.getItem("pl_predictor_user");
+                    if (savedName && !window.location.search.includes("player=")) {
+                        const url = new URL(window.location.href);
+                        url.searchParams.set("player", savedName);
+                        window.location.href = url.href;
+                    }
+                </script>
+            """, height=0)
 
         gw_list = [str(m.get("GameWeek")).strip() for m in fixtures if m.get("GameWeek")]
         gameweeks = sorted(list(set(gw_list)), key=lambda x: int(x.replace("GW", "")) if x.replace("GW", "").isdigit() else x)
@@ -306,7 +327,6 @@ try:
         if not gameweeks:
             st.error("No Gameweeks found in sheet.")
         else:
-            # --- Auto-detect Next Active Gameweek ---
             default_gw = gameweeks[0]
             for gw in gameweeks:
                 gw_matches = [m for m in fixtures if str(m.get("GameWeek", "")).strip() == str(gw).strip()]
@@ -363,16 +383,15 @@ try:
                             saved_pred = user_preds_map.get(user_key) if user_key else None
                             has_saved = saved_pred is not None and str(saved_pred[0]).strip() != "" and str(saved_pred[1]).strip() != ""
 
-                            # --- Dynamic Card Colors & Borders ---
                             card_bg = "#ffffff"
                             card_border = "#cbd5e1"
                             
                             if is_finished or kickoff_passed:
-                                card_bg = "#e2e8f0"  # Solid Light Grey
-                                card_border = "#94a3b8"  # Slate Border
+                                card_bg = "#e2e8f0"
+                                card_border = "#94a3b8"
                             elif has_saved:
-                                card_bg = "#f0fdf4"  # Pastel Green
-                                card_border = "#86efac"  # Soft Green Border
+                                card_bg = "#f0fdf4"
+                                card_border = "#86efac"
 
                             with cols[idx]:
                                 match_teams_html = f"""
