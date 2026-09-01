@@ -20,7 +20,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install requests gspread google-auth
+          pip install requests gspread google-auth pandas tenacity
 
       - name: Run Score Update Script
         env:
