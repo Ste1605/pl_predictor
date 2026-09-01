@@ -1,8 +1,50 @@
 import os
 import requests
 import gspread
+import time
 from datetime import datetime, timedelta
 from google.oauth2.service_account import Credentials
+from gspread.exceptions import APIError
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+
+# ------------------ RETRY DECORATORS FOR GSPREAD ------------------
+# Automatically retries Google API calls up to 5 times if 503/500/429 errors occur
+@retry(
+    stop=stop_after_attempt(5),
+    wait=wait_exponential(multiplier=2, min=4, max=30),
+    retry_if_exception_type(APIError),
+    reraise=True
+)
+def get_worksheet_with_retry(client, file_name, tab_name):
+    print(f"Connecting to sheet '{file_name}' / tab '{tab_name}'...")
+    return client.open(file_name).worksheet(tab_name)
+
+@retry(
+    stop=stop_after_attempt(5),
+    wait=wait_exponential(multiplier=2, min=4, max=30),
+    retry_if_exception_type(APIError),
+    reraise=True
+)
+def fetch_all_values_with_retry(sheet):
+    return sheet.get_all_values()
+
+@retry(
+    stop=stop_after_attempt(5),
+    wait=wait_exponential(multiplier=2, min=4, max=30),
+    retry_if_exception_type(APIError),
+    reraise=True
+)
+def update_cell_with_retry(sheet, row, col, value):
+    return sheet.update_cell(row, col, value)
+
+@retry(
+    stop=stop_after_attempt(5),
+    wait=wait_exponential(multiplier=2, min=4, max=30),
+    retry_if_exception_type(APIError),
+    reraise=True
+)
+def append_row_with_retry(sheet, row_data):
+    return sheet.append_row(row_data)
 
 # 1. Google Sheets Setup
 SCOPE = [
@@ -24,7 +66,7 @@ client = gspread.authorize(creds)
 FILE_NAME = "PL Predictions"
 TAB_NAME = "Fixtures Tab"
 
-sheet = client.open(FILE_NAME).worksheet(TAB_NAME)
+sheet = get_worksheet_with_retry(client, FILE_NAME, TAB_NAME)
 
 # 2. Football API Setup
 API_KEY = os.environ.get("FOOTBALL_DATA_API_KEY", "b4d7bcc9be7147d78e53c7f11c9ec283")
@@ -53,7 +95,7 @@ if not matches:
     exit()
 
 # 3. Process Sheet Rows
-all_rows = sheet.get_all_values()
+all_rows = fetch_all_values_with_retry(sheet)
 
 # Existing fixtures map (Home Team in Col 2, Away Team in Col 3)
 existing_fixtures = {}
@@ -104,15 +146,15 @@ for m in matches:
         
         # Always update formatted Kickoff and Deadline if present
         if formatted_kickoff:
-            sheet.update_cell(row_num, 5, formatted_kickoff)
+            update_cell_with_retry(sheet, row_num, 5, formatted_kickoff)
         if deadline_str:
-            sheet.update_cell(row_num, 6, deadline_str)
+            update_cell_with_retry(sheet, row_num, 6, deadline_str)
         
         # Update finished match scores & status
         if status == "FINISHED" and (current_home_val is None or current_home_val == ""):
-            sheet.update_cell(row_num, 7, home_score)  # Actual Home Score (Col 7)
-            sheet.update_cell(row_num, 8, away_score)  # Actual Away Score (Col 8)
-            sheet.update_cell(row_num, 9, status)      # Status (Col 9)
+            update_cell_with_retry(sheet, row_num, 7, home_score)  # Actual Home Score (Col 7)
+            update_cell_with_retry(sheet, row_num, 8, away_score)  # Actual Away Score (Col 8)
+            update_cell_with_retry(sheet, row_num, 9, status)      # Status (Col 9)
             print(f"Updated score: {home_team} {home_score} - {away_score} {away_team}")
             updates_count += 1
     else:
@@ -121,7 +163,7 @@ for m in matches:
 
 if new_rows_to_add:
     for new_row in new_rows_to_add:
-        sheet.append_row(new_row)
+        append_row_with_retry(sheet, new_row)
     print(f"Added {len(new_rows_to_add)} missing fixtures for Gameweek {current_matchday} to '{TAB_NAME}'.")
 else:
     print(f"All Gameweek {current_matchday} fixtures processed in '{TAB_NAME}'.")
