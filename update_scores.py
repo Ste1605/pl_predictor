@@ -1,36 +1,42 @@
 import os
+import time
 import requests
 import gspread
 from datetime import datetime, timedelta
 from google.oauth2.service_account import Credentials
 from gspread.exceptions import APIError
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
-# ------------------ RETRY DECORATORS ------------------
-@retry(
-    retry=retry_if_exception_type(APIError),
-    stop=stop_after_attempt(5),
-    wait=wait_exponential(multiplier=2, min=2, max=10),
-    reraise=True
-)
+# ------------------ NATIVE RETRY LOGIC (NO DEPENDENCIES) ------------------
+def native_retry(func):
+    """Retries a Google Sheets API call up to 5 times with exponential backoff if an APIError occurs."""
+    def wrapper(*args, **kwargs):
+        attempts = 0
+        max_attempts = 5
+        wait_time = 2
+        while attempts < max_attempts:
+            try:
+                return func(*args, **kwargs)
+            except APIError as e:
+                attempts += 1
+                if attempts >= max_attempts:
+                    print(f"Failed after {max_attempts} attempts due to APIError: {e}")
+                    raise e
+                print(f"Google API Error encountered ({e}). Retrying in {wait_time}s... (Attempt {attempts}/{max_attempts})")
+                time.sleep(wait_time)
+                wait_time *= 2
+            except Exception as e:
+                raise e
+    return wrapper
+
+@native_retry
 def get_worksheet_with_retry(client, file_name, tab_name):
     return client.open(file_name).worksheet(tab_name)
 
-@retry(
-    retry=retry_if_exception_type(APIError),
-    stop=stop_after_attempt(5),
-    wait=wait_exponential(multiplier=2, min=2, max=10),
-    reraise=True
-)
+@native_retry
 def fetch_all_values_with_retry(sheet):
     return sheet.get_all_values()
 
-@retry(
-    retry=retry_if_exception_type(APIError),
-    stop=stop_after_attempt(5),
-    wait=wait_exponential(multiplier=2, min=2, max=10),
-    reraise=True
-)
+@native_retry
 def bulk_write_with_retry(sheet, range_name, values):
     return sheet.update(range_name, values)
 
@@ -69,6 +75,7 @@ if not current_matchday:
 
 print(f"Current Matchday: {current_matchday}")
 
+# Fetch both Current Gameweek and Next Gameweek
 matchdays_to_fetch = [current_matchday, current_matchday + 1]
 matches = []
 for md in matchdays_to_fetch:
@@ -128,7 +135,6 @@ for m in matches:
         idx = existing_fixtures[fixture_key]
         row = data_rows[idx]
         
-        # Ensure row has enough columns
         while len(row) < 9:
             row.append("")
             
@@ -147,7 +153,7 @@ for m in matches:
         new_row = [match_id, home_team, away_team, gameweek, formatted_kickoff, deadline_str, home_score, away_score, status]
         data_rows.append(new_row)
 
-# 4. Write back EVERYTHING in 1 Single API Call
+# 4. Write back EVERYTHING in 1 Single Bulk API Call
 all_combined = [headers_row] + data_rows
 bulk_write_with_retry(sheet, "A1", all_combined)
 
