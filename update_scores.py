@@ -8,7 +8,6 @@ from gspread.exceptions import APIError
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 # ------------------ RETRY DECORATORS FOR GSPREAD ------------------
-# Automatically retries Google API calls up to 5 times if 503/500/429 errors occur
 @retry(
     stop=stop_after_attempt(5),
     wait=wait_exponential(multiplier=2, min=4, max=30),
@@ -34,8 +33,8 @@ def fetch_all_values_with_retry(sheet):
     retry_if_exception_type(APIError),
     reraise=True
 )
-def update_cell_with_retry(sheet, row, col, value):
-    return sheet.update_cell(row, col, value)
+def batch_update_with_retry(sheet, data_cells):
+    return sheet.update_cells(data_cells)
 
 @retry(
     stop=stop_after_attempt(5),
@@ -43,8 +42,8 @@ def update_cell_with_retry(sheet, row, col, value):
     retry_if_exception_type(APIError),
     reraise=True
 )
-def append_row_with_retry(sheet, row_data):
-    return sheet.append_row(row_data)
+def append_rows_with_retry(sheet, rows_data):
+    return sheet.append_rows(rows_data)
 
 # 1. Google Sheets Setup
 SCOPE = [
@@ -62,7 +61,6 @@ else:
 
 client = gspread.authorize(creds)
 
-# Exact File & Tab names matching your workbook
 FILE_NAME = "PL Predictions"
 TAB_NAME = "Fixtures Tab"
 
@@ -85,7 +83,6 @@ if not current_matchday:
 
 print(f"Current Gameweek/Matchday: {current_matchday}")
 
-# Fetch both Current Gameweek and Next Gameweek to populate upcoming fixtures ahead of time
 matchdays_to_fetch = [current_matchday, current_matchday + 1]
 
 matches = []
@@ -100,16 +97,16 @@ if not matches:
     print("No matches found for the requested matchdays.")
     exit()
 
-# 3. Process Sheet Rows
+# 3. Process Sheet Rows (In-Memory Batching)
 all_rows = fetch_all_values_with_retry(sheet)
 
-# Existing fixtures map (Home Team in Col 2, Away Team in Col 3)
 existing_fixtures = {}
-for i, row in enumerate(all_rows[1:], start=2):  # skip headers
+for i, row in enumerate(all_rows[1:], start=2):
     if len(row) >= 3:
         key = f"{row[1].strip().lower()} vs {row[2].strip().lower()}"
         existing_fixtures[key] = i
 
+cells_to_update = []
 new_rows_to_add = []
 updates_count = 0
 
@@ -120,11 +117,9 @@ for m in matches:
     raw_kickoff = m.get("utcDate", "")
     status = m.get("status", "SCHEDULED")
     
-    # Use the matchday from each fixture object (e.g. GW2 or GW3)
     matchday_num = m.get("matchday", current_matchday)
     gameweek = f"GW{matchday_num}"
     
-    # Format Kickoff and Deadline to readable format (e.g., "28 Aug 2026, 19:00")
     formatted_kickoff = ""
     deadline_str = ""
     
@@ -132,7 +127,6 @@ for m in matches:
         try:
             dt = datetime.fromisoformat(raw_kickoff.replace("Z", "+00:00"))
             formatted_kickoff = dt.strftime("%d %b %Y, %H:%M")
-            
             deadline_dt = dt - timedelta(hours=1)
             deadline_str = deadline_dt.strftime("%d %b %Y, %H:%M")
         except ValueError:
@@ -153,28 +147,29 @@ for m in matches:
         
         current_home_val = row_data[6] if len(row_data) >= 7 else ""
         
-        # Always update formatted Kickoff and Deadline if present
-        if formatted_kickoff:
-            update_cell_with_retry(sheet, row_num, 5, formatted_kickoff)
-        if deadline_str:
-            update_cell_with_retry(sheet, row_num, 6, deadline_str)
+        # Batch collect kickoff and deadline updates
+        if formatted_kickoff and (len(row_data) < 5 or row_data[4] != formatted_kickoff):
+            cells_to_update.append(gspread.Cell(row_num, 5, formatted_kickoff))
+        if deadline_str and (len(row_data) < 6 or row_data[5] != deadline_str):
+            cells_to_update.append(gspread.Cell(row_num, 6, deadline_str))
         
-        # Update finished match scores & status
+        # Batch collect finished scores & status updates
         if status == "FINISHED" and (current_home_val is None or current_home_val == ""):
-            update_cell_with_retry(sheet, row_num, 7, home_score)  # Actual Home Score (Col 7)
-            update_cell_with_retry(sheet, row_num, 8, away_score)  # Actual Away Score (Col 8)
-            update_cell_with_retry(sheet, row_num, 9, status)      # Status (Col 9)
-            print(f"Updated score: {home_team} {home_score} - {away_score} {away_team}")
+            cells_to_update.append(gspread.Cell(row_num, 7, home_score))
+            cells_to_update.append(gspread.Cell(row_num, 8, away_score))
+            cells_to_update.append(gspread.Cell(row_num, 9, status))
+            print(f"Queued score update: {home_team} {home_score} - {away_score} {away_team}")
             updates_count += 1
     else:
-        # Match ID, Home Team, Away Team, GameWeek, Kickoff Time, Deadline, Actual Home Score, Actual Away Score, Status
         new_rows_to_add.append([match_id, home_team, away_team, gameweek, formatted_kickoff, deadline_str, home_score, away_score, status])
 
+# 4. Execute Batch Requests
+if cells_to_update:
+    print(f"Pushed {len(cells_to_update)} cell updates in 1 batch request...")
+    batch_update_with_retry(sheet, cells_to_update)
+
 if new_rows_to_add:
-    for new_row in new_rows_to_add:
-        append_row_with_retry(sheet, new_row)
-    print(f"Added {len(new_rows_to_add)} missing fixtures to '{TAB_NAME}'.")
-else:
-    print(f"All fixtures for requested matchdays processed in '{TAB_NAME}'.")
+    print(f"Appending {len(new_rows_to_add)} new fixture rows in 1 batch request...")
+    append_rows_with_retry(sheet, new_rows_to_add)
 
 print(f"Finished. Total score updates made: {updates_count}")
