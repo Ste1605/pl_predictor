@@ -85,13 +85,19 @@ if not current_matchday:
 
 print(f"Current Gameweek/Matchday: {current_matchday}")
 
-# Fetch matches ONLY for current matchday
-matches_url = f"https://api.football-data.org/v4/competitions/PL/matches?matchday={current_matchday}"
-matches_res = requests.get(matches_url, headers=headers).json()
-matches = matches_res.get("matches", [])
+# Fetch both Current Gameweek and Next Gameweek to populate upcoming fixtures ahead of time
+matchdays_to_fetch = [current_matchday, current_matchday + 1]
+
+matches = []
+for md in matchdays_to_fetch:
+    print(f"Fetching matches for Matchday {md}...")
+    matches_url = f"https://api.football-data.org/v4/competitions/PL/matches?matchday={md}"
+    matches_res = requests.get(matches_url, headers=headers).json()
+    fetched = matches_res.get("matches", [])
+    matches.extend(fetched)
 
 if not matches:
-    print("No matches found for the current matchday.")
+    print("No matches found for the requested matchdays.")
     exit()
 
 # 3. Process Sheet Rows
@@ -113,7 +119,10 @@ for m in matches:
     away_team = m["awayTeam"]["name"]
     raw_kickoff = m.get("utcDate", "")
     status = m.get("status", "SCHEDULED")
-    gameweek = f"GW{current_matchday}"
+    
+    # Use the matchday from each fixture object (e.g. GW2 or GW3)
+    matchday_num = m.get("matchday", current_matchday)
+    gameweek = f"GW{matchday_num}"
     
     # Format Kickoff and Deadline to readable format (e.g., "28 Aug 2026, 19:00")
     formatted_kickoff = ""
@@ -164,8 +173,8 @@ for m in matches:
 if new_rows_to_add:
     for new_row in new_rows_to_add:
         append_row_with_retry(sheet, new_row)
-    print(f"Added {len(new_rows_to_add)} missing fixtures for Gameweek {current_matchday} to '{TAB_NAME}'.")
+    print(f"Added {len(new_rows_to_add)} missing fixtures to '{TAB_NAME}'.")
 else:
-    print(f"All Gameweek {current_matchday} fixtures processed in '{TAB_NAME}'.")
+    print(f"All fixtures for requested matchdays processed in '{TAB_NAME}'.")
 
 print(f"Finished. Total score updates made: {updates_count}")
