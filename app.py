@@ -529,7 +529,11 @@ try:
                                         predictions_sheet.append_rows(rows_to_append)
 
                                     st.toast("🎉 Predictions saved successfully!", icon="⚽")
+                                    
+                                    # Clear BOTH resource and data caches so new submissions reflect instantly
+                                    st.cache_data.clear()
                                     st.cache_resource.clear()
+                                    
                                     show_confirmation_modal(user_name, parsed_predictions, selected_gw)
                 else:
                     st.form_submit_button("🔒 Predictions Closed", disabled=True, use_container_width=True)
