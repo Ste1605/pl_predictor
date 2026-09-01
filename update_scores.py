@@ -32,7 +32,7 @@ def fetch_all_values_with_retry(sheet):
     reraise=True
 )
 def bulk_write_with_retry(sheet, range_name, values):
-    return sheet.update(range_name=range_name, values=values)
+    return sheet.update(range_name, values)
 
 # 1. Google Sheets Setup
 SCOPE = [
