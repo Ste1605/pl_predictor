@@ -6,9 +6,8 @@ from datetime import datetime, timedelta
 from google.oauth2.service_account import Credentials
 from gspread.exceptions import APIError
 
-# ------------------ NATIVE RETRY LOGIC (NO DEPENDENCIES) ------------------
+# ------------------ NATIVE RETRY LOGIC ------------------
 def native_retry(func):
-    """Retries a Google Sheets API call up to 5 times with exponential backoff if an APIError occurs."""
     def wrapper(*args, **kwargs):
         attempts = 0
         max_attempts = 5
@@ -71,11 +70,10 @@ current_matchday = comp_res.get("currentSeason", {}).get("currentMatchday")
 
 if not current_matchday:
     print("Could not determine current matchday.")
-    exit()
+    exit(1)
 
 print(f"Current Matchday: {current_matchday}")
 
-# Fetch both Current Gameweek and Next Gameweek
 matchdays_to_fetch = [current_matchday, current_matchday + 1]
 matches = []
 for md in matchdays_to_fetch:
@@ -85,13 +83,19 @@ for md in matchdays_to_fetch:
     matches.extend(matches_res.get("matches", []))
 
 if not matches:
-    print("No matches found.")
-    exit()
+    print("No matches returned from Football API.")
+    exit(1)
 
-# 3. Process Sheet Rows in Memory
+# 3. Read Sheet & Guard against wiping data
 all_rows = fetch_all_values_with_retry(sheet)
-headers_row = all_rows[0] if all_rows else []
-data_rows = all_rows[1:] if len(all_rows) > 1 else []
+
+if not all_rows:
+    print("WARNING: Sheet is completely empty. Initializing headers...")
+    headers_row = ["Match ID", "Home Team", "Away Team", "GameWeek", "Kickoff Time", "Deadline", "Actual Home Score", "Actual Away Score", "Status"]
+    data_rows = []
+else:
+    headers_row = all_rows[0]
+    data_rows = all_rows[1:] if len(all_rows) > 1 else []
 
 existing_fixtures = {}
 for i, row in enumerate(data_rows):
@@ -153,8 +157,11 @@ for m in matches:
         new_row = [match_id, home_team, away_team, gameweek, formatted_kickoff, deadline_str, home_score, away_score, status]
         data_rows.append(new_row)
 
-# 4. Write back EVERYTHING in 1 Single Bulk API Call
+# 4. Write back EVERYTHING in 1 Single API Call
 all_combined = [headers_row] + data_rows
-bulk_write_with_retry(sheet, "A1", all_combined)
 
-print(f"Finished successfully! Total finished matches updated: {updates_count}")
+if len(all_combined) > 1:
+    bulk_write_with_retry(sheet, "A1", all_combined)
+    print(f"Finished successfully! Wrote {len(data_rows)} rows to Google Sheets.")
+else:
+    print("Aborting write: No fixture data generated.")
