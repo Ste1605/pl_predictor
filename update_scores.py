@@ -8,27 +8,27 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 
 # ------------------ RETRY DECORATORS ------------------
 @retry(
+    retry=retry_if_exception_type(APIError),
     stop=stop_after_attempt(5),
     wait=wait_exponential(multiplier=2, min=2, max=10),
-    retry_if_exception_type(APIError),
     reraise=True
 )
 def get_worksheet_with_retry(client, file_name, tab_name):
     return client.open(file_name).worksheet(tab_name)
 
 @retry(
+    retry=retry_if_exception_type(APIError),
     stop=stop_after_attempt(5),
     wait=wait_exponential(multiplier=2, min=2, max=10),
-    retry_if_exception_type(APIError),
     reraise=True
 )
 def fetch_all_values_with_retry(sheet):
     return sheet.get_all_values()
 
 @retry(
+    retry=retry_if_exception_type(APIError),
     stop=stop_after_attempt(5),
     wait=wait_exponential(multiplier=2, min=2, max=10),
-    retry_if_exception_type(APIError),
     reraise=True
 )
 def bulk_write_with_retry(sheet, range_name, values):
