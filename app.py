@@ -346,10 +346,11 @@ try:
 
         if user:
             known_users.add(user)
+            u_clean = user.strip().lower()
             if pin_val:
-                user_pin_map[user.lower()] = pin_val
+                user_pin_map[u_clean] = pin_val
             if m_id:
-                user_preds_map[(m_id, user.lower())] = (p_home, p_away)
+                user_preds_map[(m_id, u_clean)] = (str(p_home).strip(), str(p_away).strip())
 
     user_list = sorted(list(known_users))
 
@@ -377,7 +378,7 @@ try:
                     user_name = st.text_input("Enter New Name:", placeholder="Type name...", key="new_player_input").strip()
                     is_new_player = True
                 elif selected_user != "-- Select Name --":
-                    user_name = selected_user
+                    user_name = selected_user.strip()
             else:
                 user_name = st.text_input("Player Name:", placeholder="Enter your name...", key="player_text_input").strip()
                 is_new_player = True
@@ -419,7 +420,7 @@ try:
             filtered_fixtures = [m for m in fixtures if str(m.get("GameWeek", "")).strip() == str(selected_gw).strip()]
 
             if not is_authenticated and user_name:
-                st.info("🔒 Enter your correct 4-Digit PIN above to unlock and edit predictions.")
+                st.info("🔒 Enter your correct 4-Digit PIN above to unlock and view your predictions.")
 
             with st.form(key=f"gw_form_{selected_gw}_test_{test_mode}", clear_on_submit=False):
                 predictions_input = {}
@@ -487,8 +488,9 @@ try:
                             
                             badge_html = f"<span class='badge-saved'>SAVED{time_label}</span>" if has_saved else f"<span class='badge-pending'>UPCOMING{time_label}</span>"
 
-                            init_h = str(saved_pred[0]) if saved_pred and saved_pred[0] is not None else ""
-                            init_a = str(saved_pred[1]) if saved_pred and saved_pred[1] is not None else ""
+                            # Display existing predictions if user is authenticated or if saved
+                            init_h = str(saved_pred[0]) if (saved_pred and saved_pred[0] is not None) else ""
+                            init_a = str(saved_pred[1]) if (saved_pred and saved_pred[1] is not None) else ""
 
                             st.markdown(f"""
                             <div style="background-color: {card_bg}; border: 1.5px solid {card_border}; border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
@@ -498,9 +500,9 @@ try:
 
                             p_col1, p_col2 = st.columns(2)
                             with p_col1:
-                                h_str = st.text_input(f"{home}", value=init_h, placeholder="-", max_chars=2, key=f"home_{match_id}", label_visibility="collapsed", disabled=not is_authenticated)
+                                h_str = st.text_input(f"{home}", value=init_h if is_authenticated else ("•" if has_saved else ""), placeholder="-", max_chars=2, key=f"home_{match_id}", label_visibility="collapsed", disabled=not is_authenticated)
                             with p_col2:
-                                a_str = st.text_input(f"{away}", value=init_a, placeholder="-", max_chars=2, key=f"away_{match_id}", label_visibility="collapsed", disabled=not is_authenticated)
+                                a_str = st.text_input(f"{away}", value=init_a if is_authenticated else ("•" if has_saved else ""), placeholder="-", max_chars=2, key=f"away_{match_id}", label_visibility="collapsed", disabled=not is_authenticated)
                             
                             st.markdown("</div>", unsafe_allow_html=True)
                             predictions_input[match_id] = (h_str, a_str)
@@ -586,7 +588,6 @@ try:
                                             row_map[(m_id, u_name.lower())] = idx_r
 
                                     rows_to_append = []
-                                    updated_count = 0
 
                                     for m_id, (h_val, a_val) in parsed_predictions.items():
                                         key = (str(m_id).strip(), user_name.lower())
@@ -601,7 +602,6 @@ try:
                                                 range_name=f"D{target_row}:G{target_row}", 
                                                 values=[[h_val, a_val, pts_awarded, entered_pin]]
                                             )
-                                            updated_count += 1
                                         else:
                                             pred_id = f"PRED_{datetime.now().strftime('%M%S')}_{m_id}"
                                             rows_to_append.append([pred_id, user_name, m_id, h_val, a_val, pts_awarded, entered_pin])
@@ -616,19 +616,17 @@ try:
                 else:
                     st.form_submit_button("🔒 Predictions Closed", disabled=True, use_container_width=True)
 
-# ------------------ TAB 2: READ-ONLY VIEW ALL PICKS ------------------
+    # ------------------ TAB 2: READ-ONLY VIEW ALL PICKS ------------------
     with tab_view_all:
         st.subheader("👀 All Submitted Predictions")
         if gameweeks:
             selected_view_gw = st.selectbox("Select Gameweek:", gameweeks, key="all_picks_gw")
             
-            # Filter fixtures for the chosen gameweek
             gw_fixtures = [m for m in fixtures if str(m.get("GameWeek", "")).strip() == str(selected_view_gw).strip()]
             
             if not gw_fixtures:
                 st.info(f"No fixtures found for {selected_view_gw}.")
             else:
-                # Group predictions by Match ID
                 preds_by_match = {}
                 for p in raw_preds:
                     m_id = str(p.get("Match ID", "")).strip()
@@ -636,7 +634,7 @@ try:
                     p_home = p.get("Predicted Home", p.get("Predicted Home Score", p.get("Home Score", "")))
                     p_away = p.get("Predicted Away", p.get("Predicted Away Score", p.get("Away Score", "")))
                     
-                    if m_id and user and p_home != "" and p_away != "":
+                    if m_id and user and str(p_home).strip() != "" and str(p_away).strip() != "":
                         if m_id not in preds_by_match:
                             preds_by_match[m_id] = []
                         preds_by_match[m_id].append({
@@ -644,7 +642,6 @@ try:
                             "Prediction": f"{p_home} - {p_away}"
                         })
 
-                # Display each match with all player picks under it
                 has_any_picks = False
                 for match in gw_fixtures:
                     m_id = str(match.get("Match ID", "")).strip()
