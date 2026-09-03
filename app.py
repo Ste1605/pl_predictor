@@ -131,6 +131,12 @@ st.markdown("""
         border-radius: 8px !important;
     }
 
+    /* Force horizontal row layout for inputs on mobile screens */
+    div[data-testid="stForm"] div[data-testid="stHorizontalBlock"] {
+        flex-direction: row !important;
+        gap: 8px !important;
+    }
+
     /* Save Predictions Button Mobile Fix */
     div[data-testid="stFormSubmitButton"] button {
         background-color: #2563eb !important;
@@ -444,7 +450,7 @@ try:
                                         {match_teams_html}
                                     """, unsafe_allow_html=True)
 
-                                    p_col1, p_col2 = st.columns(2)
+                                    p_col1, p_col2 = st.columns([1, 1], gap="small")
                                     with p_col1:
                                         h_str = st.text_input(f"{home}", value=init_h, placeholder="-", max_chars=2, key=f"home_{match_id}", label_visibility="collapsed")
                                     with p_col2:
