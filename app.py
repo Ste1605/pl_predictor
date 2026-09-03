@@ -193,7 +193,10 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# ------------------ DISMISSIBLE WELCOME MESSAGE ------------------
+# Session state counter to force fresh form renders after save
+if "save_counter" not in st.session_state:
+    st.session_state.save_counter = 0
+
 if "show_welcome" not in st.session_state:
     st.session_state.show_welcome = True
 
@@ -421,8 +424,9 @@ try:
             if not is_authenticated and user_name:
                 st.info("🔒 Enter your correct 4-Digit PIN above to unlock and view your predictions.")
 
-            # Load user's saved predictions into inputs when authenticated
-            with st.form(key=f"gw_form_{selected_gw}_test_{test_mode}_auth_{is_authenticated}_{user_name}", clear_on_submit=False):
+            # Dynamic Form Key includes save_counter to force clean widget re-renders
+            form_key = f"gw_form_{selected_gw}_test_{test_mode}_auth_{is_authenticated}_{user_name}_v{st.session_state.save_counter}"
+            with st.form(key=form_key, clear_on_submit=False):
                 predictions_input = {}
                 has_submittable = False
 
@@ -488,7 +492,6 @@ try:
                             
                             badge_html = f"<span class='badge-saved'>SAVED{time_label}</span>" if has_saved else f"<span class='badge-pending'>UPCOMING{time_label}</span>"
 
-                            # Set input default values strictly based on saved picks when authenticated
                             init_h = str(saved_pred[0]) if (saved_pred and saved_pred[0] is not None) else ""
                             init_a = str(saved_pred[1]) if (saved_pred and saved_pred[1] is not None) else ""
 
@@ -503,9 +506,9 @@ try:
 
                             p_col1, p_col2 = st.columns(2)
                             with p_col1:
-                                h_str = st.text_input(f"{home}", value=val_h, placeholder="-", max_chars=2, key=f"home_{match_id}_{user_name}", label_visibility="collapsed", disabled=not is_authenticated)
+                                h_str = st.text_input(f"{home}", value=val_h, placeholder="-", max_chars=2, key=f"h_{match_id}_{user_name}_v{st.session_state.save_counter}", label_visibility="collapsed", disabled=not is_authenticated)
                             with p_col2:
-                                a_str = st.text_input(f"{away}", value=val_a, placeholder="-", max_chars=2, key=f"away_{match_id}_{user_name}", label_visibility="collapsed", disabled=not is_authenticated)
+                                a_str = st.text_input(f"{away}", value=val_a, placeholder="-", max_chars=2, key=f"a_{match_id}_{user_name}_v{st.session_state.save_counter}", label_visibility="collapsed", disabled=not is_authenticated)
                             
                             st.markdown("</div>", unsafe_allow_html=True)
                             predictions_input[match_id] = (h_str, a_str)
@@ -612,6 +615,7 @@ try:
                                     if rows_to_append:
                                         predictions_sheet.append_rows(rows_to_append)
 
+                                    st.session_state.save_counter += 1
                                     st.toast("🎉 Predictions saved successfully!", icon="⚽")
                                     st.cache_data.clear()
                                     st.cache_resource.clear()
