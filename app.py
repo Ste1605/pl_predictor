@@ -221,12 +221,11 @@ def show_confirmation_modal(user_name, predictions_dict, selected_gw):
         })
     
     st.dataframe(pd.DataFrame(summary_data), hide_index=True, use_container_width=True)
-    st.success("Your picks are safely locked in!")
+    st.success("Your picks are safely locked in Google Sheets!")
     if st.button("Close", use_container_width=True):
         st.rerun()
 
 # ------------------ AUTHENTICATION & CONFIG ------------------
-@st.cache_resource
 def get_gsheet():
     scopes = [
         "https://www.googleapis.com/auth/spreadsheets",
@@ -420,7 +419,7 @@ try:
             if not is_authenticated and user_name:
                 st.info("🔒 Enter your correct 4-Digit PIN above to unlock and view your predictions.")
 
-            # Stable Form Key bound to user identity and auth status
+            # Form key bound strictly to authentication status
             form_key = f"gw_form_{selected_gw}_test_{test_mode}_auth_{is_authenticated}_{user_name.lower()}"
             with st.form(key=form_key, clear_on_submit=False):
                 predictions_input = {}
@@ -491,7 +490,6 @@ try:
                             init_h = str(saved_pred[0]) if (saved_pred and saved_pred[0] is not None) else ""
                             init_a = str(saved_pred[1]) if (saved_pred and saved_pred[1] is not None) else ""
 
-                            # Clean string values only (NO BULLET DOTS)
                             val_h = init_h if is_authenticated else ""
                             val_a = init_a if is_authenticated else ""
 
@@ -503,9 +501,9 @@ try:
 
                             p_col1, p_col2 = st.columns(2)
                             with p_col1:
-                                h_str = st.text_input(f"{home}", value=val_h, placeholder="-", max_chars=2, key=f"h_{match_id}_{user_name.lower()}", label_visibility="collapsed", disabled=not is_authenticated)
+                                h_str = st.text_input(f"{home}", value=val_h, placeholder="-", max_chars=2, key=f"h_{match_id}_{user_name.lower()}_auth_{is_authenticated}", label_visibility="collapsed", disabled=not is_authenticated)
                             with p_col2:
-                                a_str = st.text_input(f"{away}", value=val_a, placeholder="-", max_chars=2, key=f"a_{match_id}_{user_name.lower()}", label_visibility="collapsed", disabled=not is_authenticated)
+                                a_str = st.text_input(f"{away}", value=val_a, placeholder="-", max_chars=2, key=f"a_{match_id}_{user_name.lower()}_auth_{is_authenticated}", label_visibility="collapsed", disabled=not is_authenticated)
                             
                             st.markdown("</div>", unsafe_allow_html=True)
                             predictions_input[match_id] = (h_str, a_str)
@@ -613,8 +611,6 @@ try:
                                         predictions_sheet.append_rows(rows_to_append)
 
                                     st.toast("🎉 Predictions saved successfully!", icon="⚽")
-                                    st.cache_data.clear()
-                                    st.cache_resource.clear()
                                     show_confirmation_modal(user_name, parsed_predictions, selected_gw)
                 else:
                     st.form_submit_button("🔒 Predictions Closed", disabled=True, use_container_width=True)
