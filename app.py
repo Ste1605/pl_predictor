@@ -4,11 +4,12 @@ import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 # ------------------ PAGE CONFIG ------------------
 st.set_page_config(
-    page_title="PL Predictor", 
-    page_icon="⚽", 
+    page_title="Premier League Predictor", 
+    page_icon="🏆",  # Displays custom trophy icon instead of standard Streamlit logo
     layout="centered"
 )
 
@@ -165,6 +166,22 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
+# ------------------ DISMISSIBLE WELCOME MESSAGE ------------------
+if "show_welcome" not in st.session_state:
+    st.session_state.show_welcome = True
+
+if st.session_state.show_welcome:
+    with st.expander("👋 Welcome to Premier League Predictor! (Click to expand info)", expanded=True):
+        st.write("""
+        Welcome! Select or add your player name, predict scorelines for upcoming matches, and save your picks before kickoff.
+        
+        * **3 Points:** Exact scoreline prediction.
+        * **1 Point:** Correct match outcome (Win/Loss/Draw).
+        """)
+        if st.button("Don't show this again", key="dismiss_welcome"):
+            st.session_state.show_welcome = False
+            st.rerun()
+
 # --- Submission Confirmation Modal ---
 @st.dialog("🎉 Predictions Saved!")
 def show_confirmation_modal(user_name, predictions_dict, selected_gw):
@@ -201,27 +218,33 @@ def get_gsheet():
     gc = gspread.authorize(creds)
     return gc.open("PL Predictions")
 
+# --- DATE & TIMEZONE HELPERS (CONVERTS TO IRISH LOCAL TIME) ---
 def parse_kickoff_date(kickoff_raw):
     if not kickoff_raw:
         return None
     time_str = str(kickoff_raw).strip()
+    
+    dt = None
     try:
-        return datetime.strptime(time_str, "%d %b %Y, %H:%M")
+        dt = datetime.strptime(time_str, "%d %b %Y, %H:%M")
     except ValueError:
         try:
             clean_time = time_str.replace("Z", "+00:00")
-            return datetime.fromisoformat(clean_time)
+            dt = datetime.fromisoformat(clean_time)
         except Exception:
             return None
+
+    if dt and dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    
+    return dt.astimezone(ZoneInfo("Europe/Dublin"))
 
 def is_kickoff_passed(kickoff_raw):
     dt = parse_kickoff_date(kickoff_raw)
     if not dt:
         return False
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    now_utc = datetime.now(timezone.utc)
-    return now_utc >= dt
+    now_local = datetime.now(ZoneInfo("Europe/Dublin"))
+    return now_local >= dt
 
 def get_day_header(kickoff_raw):
     dt = parse_kickoff_date(kickoff_raw)
@@ -258,10 +281,11 @@ try:
     fixtures = fixtures_sheet.get_all_records()
     raw_preds = predictions_sheet.get_all_records()
 
-    tab_predict, tab_leaderboard = st.tabs(["📝 Match Center", "🏆 Leaderboard"])
+    tab_predict, tab_view_all, tab_leaderboard = st.tabs(["📝 Match Center", "👀 View All Picks", "🏆 Leaderboard"])
 
     results_map = {}
     match_gw_map = {}
+    match_details_map = {}
     for m in fixtures:
         m_id = str(m.get("Match ID", "")).strip()
         gw_val = str(m.get("GameWeek", "")).strip()
@@ -271,6 +295,11 @@ try:
 
         if m_id:
             match_gw_map[m_id] = gw_val
+            match_details_map[m_id] = {
+                "Home": get_short_name(m.get("Home Team", "Home")),
+                "Away": get_short_name(m.get("Away Team", "Away")),
+                "GameWeek": gw_val
+            }
 
         if status_val in ["FINISHED", "PAUSED"] or (h_actual != "" and a_actual != "" and h_actual is not None and a_actual is not None):
             try:
@@ -292,6 +321,9 @@ try:
 
     user_list = sorted(list(known_users))
 
+    gw_list = [str(m.get("GameWeek")).strip() for m in fixtures if m.get("GameWeek")]
+    gameweeks = sorted(list(set(gw_list)), key=lambda x: int(x.replace("GW", "")) if x.replace("GW", "").isdigit() else x)
+
     # ------------------ TAB 1: PREDICTIONS ------------------
     with tab_predict:
         top_c1, top_c2 = st.columns([2, 1])
@@ -312,9 +344,6 @@ try:
                     user_name = ""
             else:
                 user_name = st.text_input("Player Name:", placeholder="Enter your name...", key="player_text_input").strip()
-
-        gw_list = [str(m.get("GameWeek")).strip() for m in fixtures if m.get("GameWeek")]
-        gameweeks = sorted(list(set(gw_list)), key=lambda x: int(x.replace("GW", "")) if x.replace("GW", "").isdigit() else x)
 
         if not gameweeks:
             st.error("No Gameweeks found in sheet.")
@@ -529,16 +558,40 @@ try:
                                         predictions_sheet.append_rows(rows_to_append)
 
                                     st.toast("🎉 Predictions saved successfully!", icon="⚽")
-                                    
-                                    # Clear BOTH resource and data caches so new submissions reflect instantly
                                     st.cache_data.clear()
                                     st.cache_resource.clear()
-                                    
                                     show_confirmation_modal(user_name, parsed_predictions, selected_gw)
                 else:
                     st.form_submit_button("🔒 Predictions Closed", disabled=True, use_container_width=True)
 
-    # ------------------ TAB 2: LEADERBOARD ------------------
+    # ------------------ TAB 2: READ-ONLY VIEW ALL PICKS ------------------
+    with tab_view_all:
+        st.subheader("👀 All Submitted Predictions")
+        if gameweeks:
+            selected_view_gw = st.selectbox("Select Gameweek:", gameweeks, key="all_picks_gw")
+            
+            view_data = []
+            for p in raw_preds:
+                m_id = str(p.get("Match ID", "")).strip()
+                user = str(p.get("User ID", "") or p.get("User", "") or p.get("Name", "")).strip()
+                p_home = p.get("Predicted Home", p.get("Predicted Home Score", p.get("Home Score", "")))
+                p_away = p.get("Predicted Away", p.get("Predicted Away Score", p.get("Away Score", "")))
+                
+                m_info = match_details_map.get(m_id, {})
+                if m_info.get("GameWeek") == selected_view_gw:
+                    view_data.append({
+                        "Player": user,
+                        "Fixture": f"{m_info.get('Home', 'Home')} vs {m_info.get('Away', 'Away')}",
+                        "Prediction": f"{p_home} - {p_away}"
+                    })
+            
+            if view_data:
+                df_view = pd.DataFrame(view_data)
+                st.dataframe(df_view, use_container_width=True, hide_index=True)
+            else:
+                st.info(f"No predictions submitted yet for {selected_view_gw}.")
+
+    # ------------------ TAB 3: LEADERBOARD ------------------
     with tab_leaderboard:
         st.subheader("🏆 Leaderboard Standings")
 
