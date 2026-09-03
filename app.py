@@ -363,7 +363,6 @@ try:
         with top_c2:
             test_mode = st.toggle("🧪 Test Mode", value=False)
         
-        # --- Player Selection Dropdown & PIN Validation ---
         p_col1, p_col2 = st.columns([2, 1])
         user_name = ""
         entered_pin = ""
@@ -422,7 +421,8 @@ try:
             if not is_authenticated and user_name:
                 st.info("🔒 Enter your correct 4-Digit PIN above to unlock and view your predictions.")
 
-            with st.form(key=f"gw_form_{selected_gw}_test_{test_mode}", clear_on_submit=False):
+            # Load user's saved predictions into inputs when authenticated
+            with st.form(key=f"gw_form_{selected_gw}_test_{test_mode}_auth_{is_authenticated}_{user_name}", clear_on_submit=False):
                 predictions_input = {}
                 has_submittable = False
 
@@ -488,9 +488,12 @@ try:
                             
                             badge_html = f"<span class='badge-saved'>SAVED{time_label}</span>" if has_saved else f"<span class='badge-pending'>UPCOMING{time_label}</span>"
 
-                            # Display existing predictions if user is authenticated or if saved
+                            # Set input default values strictly based on saved picks when authenticated
                             init_h = str(saved_pred[0]) if (saved_pred and saved_pred[0] is not None) else ""
                             init_a = str(saved_pred[1]) if (saved_pred and saved_pred[1] is not None) else ""
+
+                            val_h = init_h if is_authenticated else ("•" if has_saved else "")
+                            val_a = init_a if is_authenticated else ("•" if has_saved else "")
 
                             st.markdown(f"""
                             <div style="background-color: {card_bg}; border: 1.5px solid {card_border}; border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
@@ -500,9 +503,9 @@ try:
 
                             p_col1, p_col2 = st.columns(2)
                             with p_col1:
-                                h_str = st.text_input(f"{home}", value=init_h if is_authenticated else ("•" if has_saved else ""), placeholder="-", max_chars=2, key=f"home_{match_id}", label_visibility="collapsed", disabled=not is_authenticated)
+                                h_str = st.text_input(f"{home}", value=val_h, placeholder="-", max_chars=2, key=f"home_{match_id}_{user_name}", label_visibility="collapsed", disabled=not is_authenticated)
                             with p_col2:
-                                a_str = st.text_input(f"{away}", value=init_a if is_authenticated else ("•" if has_saved else ""), placeholder="-", max_chars=2, key=f"away_{match_id}", label_visibility="collapsed", disabled=not is_authenticated)
+                                a_str = st.text_input(f"{away}", value=val_a, placeholder="-", max_chars=2, key=f"away_{match_id}_{user_name}", label_visibility="collapsed", disabled=not is_authenticated)
                             
                             st.markdown("</div>", unsafe_allow_html=True)
                             predictions_input[match_id] = (h_str, a_str)
