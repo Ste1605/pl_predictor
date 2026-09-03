@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 # ------------------ PAGE CONFIG ------------------
 st.set_page_config(
     page_title="Premier League Predictor", 
-    page_icon="🏆",  # Displays custom trophy icon instead of standard Streamlit logo
+    page_icon="🏆",
     layout="centered"
 )
 
@@ -157,10 +157,23 @@ st.markdown("""
     .pts-badge-green { color: #166534 !important; font-weight: 700; background: #dcfce7; padding: 3px 8px; border-radius: 6px; }
     .pts-badge-red { color: #991b1b !important; font-weight: 700; background: #fee2e2; padding: 3px 8px; border-radius: 6px; }
 
-    .team-row { display: flex; align-items: center; justify-content: space-between; margin: 8px 0; }
-    .team-badge-container { display: flex; align-items: center; gap: 8px; }
+    /* Flexbox rule forcing home/away teams to stay horizontally aligned on mobile */
+    .team-row { 
+        display: flex !important; 
+        flex-direction: row !important;
+        align-items: center !important; 
+        justify-content: space-between !important; 
+        margin: 10px 0 !important;
+        width: 100% !important;
+    }
+    .team-badge-container { 
+        display: flex !important; 
+        flex-direction: row !important;
+        align-items: center !important; 
+        gap: 6px !important; 
+    }
     .team-crest { width: 22px; height: 22px; object-fit: contain; }
-    .team-name { font-size: 14px; font-weight: 700; color: #1e293b !important; white-space: nowrap; }
+    .team-name { font-size: 13px; font-weight: 700; color: #1e293b !important; white-space: nowrap; }
     .day-header { font-size: 13px; font-weight: 700; color: #1d4ed8 !important; text-transform: uppercase; margin-top: 18px; margin-bottom: 8px; border-bottom: 1px solid #cbd5e1; }
     </style>
 """, unsafe_allow_html=True)
@@ -427,7 +440,7 @@ try:
                                         <img src="{home_crest}" class="team-crest" />
                                         <span class="team-name">{home}</span>
                                     </div>
-                                    <span style="color:#64748b; font-size:12px; font-weight:600;">vs</span>
+                                    <span style="color:#64748b; font-size:12px; font-weight:600; padding:0 4px;">vs</span>
                                     <div class="team-badge-container">
                                         <span class="team-name">{away}</span>
                                         <img src="{away_crest}" class="team-crest" />
