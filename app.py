@@ -131,10 +131,19 @@ st.markdown("""
         border-radius: 8px !important;
     }
 
-    /* Force horizontal row layout for inputs on mobile screens */
+    /* Force Streamlit Columns inside input row to remain strictly horizontal on mobile */
     div[data-testid="stForm"] div[data-testid="stHorizontalBlock"] {
+        display: flex !important;
         flex-direction: row !important;
-        gap: 8px !important;
+        flex-wrap: nowrap !important;
+        gap: 12px !important;
+        align-items: center !important;
+    }
+    
+    div[data-testid="stForm"] div[data-testid="stHorizontalBlock"] > div {
+        width: 50% !important;
+        min-width: 0 !important;
+        flex: 1 1 50% !important;
     }
 
     /* Save Predictions Button Mobile Fix */
@@ -157,8 +166,8 @@ st.markdown("""
     .pts-badge-green { color: #166534 !important; font-weight: 700; background: #dcfce7; padding: 3px 8px; border-radius: 6px; }
     .pts-badge-red { color: #991b1b !important; font-weight: 700; background: #fee2e2; padding: 3px 8px; border-radius: 6px; }
 
-    /* Flexbox rule forcing home/away teams to stay horizontally aligned on mobile */
-    .team-row { 
+    /* Custom Mobile-Safe Horizontal Flexbox Layout for Match Header */
+    .team-row-flex { 
         display: flex !important; 
         flex-direction: row !important;
         align-items: center !important; 
@@ -166,14 +175,20 @@ st.markdown("""
         margin: 10px 0 !important;
         width: 100% !important;
     }
-    .team-badge-container { 
+    .team-side { 
         display: flex !important; 
         flex-direction: row !important;
         align-items: center !important; 
         gap: 6px !important; 
+        flex: 1 !important;
     }
-    .team-crest { width: 22px; height: 22px; object-fit: contain; }
-    .team-name { font-size: 13px; font-weight: 700; color: #1e293b !important; white-space: nowrap; }
+    .team-side.left { justify-content: flex-start !important; }
+    .team-side.right { justify-content: flex-end !important; }
+
+    .team-crest { width: 22px; height: 22px; object-fit: contain; flex-shrink: 0; }
+    .team-name { font-size: 13px; font-weight: 700; color: #1e293b !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .vs-text { color: #64748b; font-size: 12px; font-weight: 600; padding: 0 6px; flex-shrink: 0; }
+    
     .day-header { font-size: 13px; font-weight: 700; color: #1d4ed8 !important; text-transform: uppercase; margin-top: 18px; margin-bottom: 8px; border-bottom: 1px solid #cbd5e1; }
     </style>
 """, unsafe_allow_html=True)
@@ -397,121 +412,116 @@ try:
                 for day_str, matches in grouped_fixtures.items():
                     st.markdown(f"<div class='day-header'>📅 {day_str}</div>", unsafe_allow_html=True)
                     
-                    for i in range(0, len(matches), 2):
-                        pair = matches[i:i+2]
-                        cols = st.columns(2)
+                    for match in matches:
+                        match_id = str(match.get("Match ID", "")).strip()
+                        raw_home = match.get("Home Team", "Home")
+                        raw_away = match.get("Away Team", "Away")
                         
-                        for idx, match in enumerate(pair):
-                            match_id = str(match.get("Match ID", f"match_{i+idx}")).strip()
-                            raw_home = match.get("Home Team", "Home")
-                            raw_away = match.get("Away Team", "Away")
-                            
-                            home = get_short_name(raw_home)
-                            away = get_short_name(raw_away)
-                            
-                            home_crest = get_badge_url(raw_home)
-                            away_crest = get_badge_url(raw_away)
-                            
-                            kickoff = match.get("Kickoff Time", "")
-                            time_str = get_time_only(kickoff)
-                            status_val = str(match.get("Status", "")).strip().upper()
-                            
-                            is_finished = (status_val in ["FINISHED", "PAUSED"]) or (match_id in results_map)
-                            kickoff_passed = is_kickoff_passed(kickoff)
-                            
-                            user_key = (match_id, user_name.lower()) if user_name else None
-                            saved_pred = user_preds_map.get(user_key) if user_key else None
-                            has_saved = saved_pred is not None and str(saved_pred[0]).strip() != "" and str(saved_pred[1]).strip() != ""
+                        home = get_short_name(raw_home)
+                        away = get_short_name(raw_away)
+                        
+                        home_crest = get_badge_url(raw_home)
+                        away_crest = get_badge_url(raw_away)
+                        
+                        kickoff = match.get("Kickoff Time", "")
+                        time_str = get_time_only(kickoff)
+                        status_val = str(match.get("Status", "")).strip().upper()
+                        
+                        is_finished = (status_val in ["FINISHED", "PAUSED"]) or (match_id in results_map)
+                        kickoff_passed = is_kickoff_passed(kickoff)
+                        
+                        user_key = (match_id, user_name.lower()) if user_name else None
+                        saved_pred = user_preds_map.get(user_key) if user_key else None
+                        has_saved = saved_pred is not None and str(saved_pred[0]).strip() != "" and str(saved_pred[1]).strip() != ""
 
-                            card_bg = "#ffffff"
-                            card_border = "#cbd5e1"
-                            
-                            if is_finished or kickoff_passed:
-                                card_bg = "#e2e8f0"
-                                card_border = "#94a3b8"
-                            elif has_saved:
-                                card_bg = "#f0fdf4"
-                                card_border = "#86efac"
+                        card_bg = "#ffffff"
+                        card_border = "#cbd5e1"
+                        
+                        if is_finished or kickoff_passed:
+                            card_bg = "#e2e8f0"
+                            card_border = "#94a3b8"
+                        elif has_saved:
+                            card_bg = "#f0fdf4"
+                            card_border = "#86efac"
 
-                            with cols[idx]:
-                                match_teams_html = f"""
-                                <div class="team-row">
-                                    <div class="team-badge-container">
+                        match_teams_html = f"""
+                        <div class="team-row-flex">
+                            <div class="team-side left">
+                                <img src="{home_crest}" class="team-crest" />
+                                <span class="team-name">{home}</span>
+                            </div>
+                            <span class="vs-text">vs</span>
+                            <div class="team-side right">
+                                <span class="team-name">{away}</span>
+                                <img src="{away_crest}" class="team-crest" />
+                            </div>
+                        </div>
+                        """
+
+                        if test_mode or (not is_finished and not kickoff_passed):
+                            has_submittable = True
+                            time_label = f" • {time_str}" if time_str else ""
+                            
+                            badge_html = f"<span class='badge-saved'>SAVED{time_label}</span>" if has_saved else f"<span class='badge-pending'>UPCOMING{time_label}</span>"
+
+                            init_h = str(saved_pred[0]) if saved_pred and saved_pred[0] is not None else ""
+                            init_a = str(saved_pred[1]) if saved_pred and saved_pred[1] is not None else ""
+
+                            st.markdown(f"""
+                            <div style="background-color: {card_bg}; border: 1.5px solid {card_border}; border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
+                                {badge_html}
+                                {match_teams_html}
+                            """, unsafe_allow_html=True)
+
+                            p_col1, p_col2 = st.columns(2)
+                            with p_col1:
+                                h_str = st.text_input(f"{home}", value=init_h, placeholder="-", max_chars=2, key=f"home_{match_id}", label_visibility="collapsed")
+                            with p_col2:
+                                a_str = st.text_input(f"{away}", value=init_a, placeholder="-", max_chars=2, key=f"away_{match_id}", label_visibility="collapsed")
+                            
+                            st.markdown("</div>", unsafe_allow_html=True)
+                            predictions_input[match_id] = (h_str, a_str)
+
+                        elif is_finished:
+                            act_h, act_a = results_map.get(match_id, ("-", "-"))
+                            
+                            pick_html = ""
+                            if saved_pred and saved_pred[0] != "" and saved_pred[1] != "":
+                                pts = calculate_points(saved_pred[0], saved_pred[1], act_h, act_a)
+                                badge_cls = "pts-badge-green" if pts is not None and pts > 0 else "pts-badge-red"
+                                pick_html = f"<div style='font-size:12px; color:#475569; margin-top:6px;'>Your Pick: <b>{saved_pred[0]} - {saved_pred[1]}</b> • <span class='{badge_cls}'>+{pts} Pts</span></div>"
+                            else:
+                                pick_html = "<div style='font-size:12px; color:#64748b; margin-top:6px;'>Your Pick: <i>No prediction submitted</i></div>"
+
+                            st.markdown(f"""
+                            <div style="background-color: {card_bg}; border: 1.5px solid {card_border}; border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
+                                <div><span class='badge-ft'>FINAL RESULT</span></div>
+                                <div class="team-row-flex" style="margin-top:8px;">
+                                    <div class="team-side left">
                                         <img src="{home_crest}" class="team-crest" />
                                         <span class="team-name">{home}</span>
                                     </div>
-                                    <span style="color:#64748b; font-size:12px; font-weight:600; padding:0 4px;">vs</span>
-                                    <div class="team-badge-container">
+                                    <div style="font-size:16px; font-weight:800; color:#2563eb; padding:0 6px;">{act_h} - {act_a}</div>
+                                    <div class="team-side right">
                                         <span class="team-name">{away}</span>
                                         <img src="{away_crest}" class="team-crest" />
                                     </div>
                                 </div>
-                                """
+                                {pick_html}
+                            </div>
+                            """, unsafe_allow_html=True)
 
-                                if test_mode or (not is_finished and not kickoff_passed):
-                                    has_submittable = True
-                                    time_label = f" • {time_str}" if time_str else ""
-                                    
-                                    badge_html = f"<span class='badge-saved'>SAVED{time_label}</span>" if has_saved else f"<span class='badge-pending'>UPCOMING{time_label}</span>"
-
-                                    init_h = str(saved_pred[0]) if saved_pred and saved_pred[0] is not None else ""
-                                    init_a = str(saved_pred[1]) if saved_pred and saved_pred[1] is not None else ""
-
-                                    st.markdown(f"""
-                                    <div style="background-color: {card_bg}; border: 1.5px solid {card_border}; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
-                                        {badge_html}
-                                        {match_teams_html}
-                                    """, unsafe_allow_html=True)
-
-                                    p_col1, p_col2 = st.columns([1, 1], gap="small")
-                                    with p_col1:
-                                        h_str = st.text_input(f"{home}", value=init_h, placeholder="-", max_chars=2, key=f"home_{match_id}", label_visibility="collapsed")
-                                    with p_col2:
-                                        a_str = st.text_input(f"{away}", value=init_a, placeholder="-", max_chars=2, key=f"away_{match_id}", label_visibility="collapsed")
-                                    
-                                    st.markdown("</div>", unsafe_allow_html=True)
-                                    predictions_input[match_id] = (h_str, a_str)
-
-                                elif is_finished:
-                                    act_h, act_a = results_map.get(match_id, ("-", "-"))
-                                    
-                                    pick_html = ""
-                                    if saved_pred and saved_pred[0] != "" and saved_pred[1] != "":
-                                        pts = calculate_points(saved_pred[0], saved_pred[1], act_h, act_a)
-                                        badge_cls = "pts-badge-green" if pts is not None and pts > 0 else "pts-badge-red"
-                                        pick_html = f"<div style='font-size:12px; color:#475569; margin-top:6px;'>Your Pick: <b>{saved_pred[0]} - {saved_pred[1]}</b> • <span class='{badge_cls}'>+{pts} Pts</span></div>"
-                                    else:
-                                        pick_html = "<div style='font-size:12px; color:#64748b; margin-top:6px;'>Your Pick: <i>No prediction submitted</i></div>"
-
-                                    st.markdown(f"""
-                                    <div style="background-color: {card_bg}; border: 1.5px solid {card_border}; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
-                                        <div><span class='badge-ft'>FINAL RESULT</span></div>
-                                        <div class="team-row" style="margin-top:8px;">
-                                            <div class="team-badge-container">
-                                                <img src="{home_crest}" class="team-crest" />
-                                                <span class="team-name">{home}</span>
-                                            </div>
-                                            <div style="font-size:16px; font-weight:800; color:#2563eb;">{act_h} - {act_a}</div>
-                                            <div class="team-badge-container">
-                                                <span class="team-name">{away}</span>
-                                                <img src="{away_crest}" class="team-crest" />
-                                            </div>
-                                        </div>
-                                        {pick_html}
-                                    </div>
-                                    """, unsafe_allow_html=True)
-
-                                else:
-                                    val_h = saved_pred[0] if saved_pred and saved_pred[0] != "" else "-"
-                                    val_a = saved_pred[1] if saved_pred and saved_pred[1] != "" else "-"
-                                    
-                                    st.markdown(f"""
-                                    <div style="background-color: {card_bg}; border: 1.5px solid {card_border}; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
-                                        <div><span class='badge-locked'>LOCKED</span></div>
-                                        {match_teams_html}
-                                        <div style='font-size:12px; color:#475569; margin-top:6px;'>Your Pick: <b>{val_h} - {val_a}</b></div>
-                                    </div>
-                                    """, unsafe_allow_html=True)
+                        else:
+                            val_h = saved_pred[0] if saved_pred and saved_pred[0] != "" else "-"
+                            val_a = saved_pred[1] if saved_pred and saved_pred[1] != "" else "-"
+                            
+                            st.markdown(f"""
+                            <div style="background-color: {card_bg}; border: 1.5px solid {card_border}; border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
+                                <div><span class='badge-locked'>LOCKED</span></div>
+                                {match_teams_html}
+                                <div style='font-size:12px; color:#475569; margin-top:6px;'>Your Pick: <b>{val_h} - {val_a}</b></div>
+                            </div>
+                            """, unsafe_allow_html=True)
 
                 st.markdown("<br>", unsafe_allow_html=True)
 
