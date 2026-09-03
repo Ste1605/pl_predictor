@@ -616,32 +616,60 @@ try:
                 else:
                     st.form_submit_button("🔒 Predictions Closed", disabled=True, use_container_width=True)
 
-    # ------------------ TAB 2: READ-ONLY VIEW ALL PICKS ------------------
+# ------------------ TAB 2: READ-ONLY VIEW ALL PICKS ------------------
     with tab_view_all:
         st.subheader("👀 All Submitted Predictions")
         if gameweeks:
             selected_view_gw = st.selectbox("Select Gameweek:", gameweeks, key="all_picks_gw")
             
-            view_data = []
-            for p in raw_preds:
-                m_id = str(p.get("Match ID", "")).strip()
-                user = str(p.get("User ID", "") or p.get("User", "") or p.get("Name", "")).strip()
-                p_home = p.get("Predicted Home", p.get("Predicted Home Score", p.get("Home Score", "")))
-                p_away = p.get("Predicted Away", p.get("Predicted Away Score", p.get("Away Score", "")))
-                
-                m_info = match_details_map.get(m_id, {})
-                if m_info.get("GameWeek") == selected_view_gw:
-                    view_data.append({
-                        "Player": user,
-                        "Fixture": f"{m_info.get('Home', 'Home')} vs {m_info.get('Away', 'Away')}",
-                        "Prediction": f"{p_home} - {p_away}"
-                    })
+            # Filter fixtures for the chosen gameweek
+            gw_fixtures = [m for m in fixtures if str(m.get("GameWeek", "")).strip() == str(selected_view_gw).strip()]
             
-            if view_data:
-                df_view = pd.DataFrame(view_data)
-                st.dataframe(df_view, use_container_width=True, hide_index=True)
+            if not gw_fixtures:
+                st.info(f"No fixtures found for {selected_view_gw}.")
             else:
-                st.info(f"No predictions submitted yet for {selected_view_gw}.")
+                # Group predictions by Match ID
+                preds_by_match = {}
+                for p in raw_preds:
+                    m_id = str(p.get("Match ID", "")).strip()
+                    user = str(p.get("User ID", "") or p.get("User", "") or p.get("Name", "")).strip()
+                    p_home = p.get("Predicted Home", p.get("Predicted Home Score", p.get("Home Score", "")))
+                    p_away = p.get("Predicted Away", p.get("Predicted Away Score", p.get("Away Score", "")))
+                    
+                    if m_id and user and p_home != "" and p_away != "":
+                        if m_id not in preds_by_match:
+                            preds_by_match[m_id] = []
+                        preds_by_match[m_id].append({
+                            "Player": user,
+                            "Prediction": f"{p_home} - {p_away}"
+                        })
+
+                # Display each match with all player picks under it
+                has_any_picks = False
+                for match in gw_fixtures:
+                    m_id = str(match.get("Match ID", "")).strip()
+                    home = get_short_name(match.get("Home Team", "Home"))
+                    away = get_short_name(match.get("Away Team", "Away"))
+                    time_str = get_time_only(match.get("Kickoff Time", ""))
+                    
+                    match_picks = preds_by_match.get(m_id, [])
+                    
+                    if match_picks:
+                        has_any_picks = True
+                        with st.expander(f"⚽ **{home} vs {away}** ({time_str if time_str else 'TBD'}) — *{len(match_picks)} picks*", expanded=True):
+                            df_match_picks = pd.DataFrame(match_picks)
+                            st.dataframe(
+                                df_match_picks, 
+                                use_container_width=True, 
+                                hide_index=True,
+                                column_config={
+                                    "Player": st.column_config.TextColumn("Player Name", width="medium"),
+                                    "Prediction": st.column_config.TextColumn("Predicted Score", width="small")
+                                }
+                            )
+
+                if not has_any_picks:
+                    st.info(f"No predictions submitted yet for any matches in {selected_view_gw}.")
 
     # ------------------ TAB 3: LEADERBOARD ------------------
     with tab_leaderboard:
