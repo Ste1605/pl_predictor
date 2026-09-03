@@ -1,4 +1,5 @@
 import os
+import json
 import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
@@ -13,10 +14,8 @@ st.set_page_config(
     layout="centered"
 )
 
-# Premier League Header Logo URL
 PL_LOGO_URL = "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg"
 
-# Premier League Official Team Badge Directory
 TEAM_BADGES = {
     "arsenal": "https://a.espncdn.com/i/teamlogos/soccer/500/359.png",
     "aston villa": "https://a.espncdn.com/i/teamlogos/soccer/500/362.png",
@@ -55,7 +54,6 @@ def get_badge_url(team_name):
             return url
     return "https://a.espncdn.com/i/teamlogos/soccer/500/default-team-logo.png"
 
-# Custom UI Name Shortener
 SHORT_TEAM_NAMES = {
     "Brighton & Hove Albion FC": "Brighton",
     "Brighton & Hove Albion": "Brighton",
@@ -110,7 +108,6 @@ st.markdown("""
     .header-branding img { height: 52px; width: auto; }
     .header-branding h1 { font-size: 28px; font-weight: 800; margin: 0; color: #0f172a !important; }
 
-    /* Dark Text Overrides for Mobile/Dark Mode */
     button[data-baseweb="tab"] { color: #0f172a !important; font-weight: 700 !important; }
     button[data-baseweb="tab"] p { color: #0f172a !important; font-weight: 700 !important; }
 
@@ -123,7 +120,6 @@ st.markdown("""
         color: #0f172a !important;
     }
 
-    /* Force Centered Inputs */
     .stTextInput input {
         text-align: center !important;
         font-size: 16px !important;
@@ -131,7 +127,6 @@ st.markdown("""
         border-radius: 8px !important;
     }
 
-    /* Force Streamlit Columns inside input row to remain strictly horizontal on mobile */
     div[data-testid="stForm"] div[data-testid="stHorizontalBlock"] {
         display: flex !important;
         flex-direction: row !important;
@@ -146,7 +141,6 @@ st.markdown("""
         flex: 1 1 50% !important;
     }
 
-    /* Save Predictions Button Mobile Fix */
     div[data-testid="stFormSubmitButton"] button {
         background-color: #2563eb !important;
         color: #ffffff !important;
@@ -166,7 +160,6 @@ st.markdown("""
     .pts-badge-green { color: #166534 !important; font-weight: 700; background: #dcfce7; padding: 3px 8px; border-radius: 6px; }
     .pts-badge-red { color: #991b1b !important; font-weight: 700; background: #fee2e2; padding: 3px 8px; border-radius: 6px; }
 
-    /* Custom Mobile-Safe Horizontal Flexbox Layout for Match Header */
     .team-row-flex { 
         display: flex !important; 
         flex-direction: row !important;
@@ -207,7 +200,7 @@ if "show_welcome" not in st.session_state:
 if st.session_state.show_welcome:
     with st.expander("👋 Welcome to Premier League Predictor! (Click to expand info)", expanded=True):
         st.write("""
-        Welcome! Select or add your player name, predict scorelines for upcoming matches, and save your picks before kickoff.
+        Welcome! Select or add your player name, set a 4-digit PIN to secure your account, predict scorelines for upcoming matches, and save your picks before kickoff.
         
         * **3 Points:** Exact scoreline prediction.
         * **1 Point:** Correct match outcome (Win/Loss/Draw).
@@ -243,7 +236,6 @@ def get_gsheet():
     if "gcp_service_account" in st.secrets:
         creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
     elif "GOOGLE_CREDENTIALS" in os.environ:
-        import json
         creds_dict = json.loads(os.environ["GOOGLE_CREDENTIALS"])
         creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     else:
@@ -252,7 +244,7 @@ def get_gsheet():
     gc = gspread.authorize(creds)
     return gc.open("PL Predictions")
 
-# --- DATE & TIMEZONE HELPERS (CONVERTS TO IRISH LOCAL TIME) ---
+# --- DATE & TIMEZONE HELPERS ---
 def parse_kickoff_date(kickoff_raw):
     if not kickoff_raw:
         return None
@@ -343,13 +335,19 @@ try:
 
     user_preds_map = {}
     known_users = set()
+    user_pin_map = {}
+    
     for p in raw_preds:
         m_id = str(p.get("Match ID", "")).strip()
         user = str(p.get("User ID", "") or p.get("User", "") or p.get("Name", "")).strip()
         p_home = p.get("Predicted Home", p.get("Predicted Home Score", p.get("Home Score", "")))
         p_away = p.get("Predicted Away", p.get("Predicted Away Score", p.get("Away Score", "")))
+        pin_val = str(p.get("PIN", "")).strip()
+
         if user:
             known_users.add(user)
+            if pin_val:
+                user_pin_map[user.lower()] = pin_val
             if m_id:
                 user_preds_map[(m_id, user.lower())] = (p_home, p_away)
 
@@ -364,20 +362,42 @@ try:
         with top_c2:
             test_mode = st.toggle("🧪 Test Mode", value=False)
         
-        # --- Player Selection Dropdown & New Player Input ---
+        # --- Player Selection Dropdown & PIN Validation ---
         p_col1, p_col2 = st.columns([2, 1])
+        user_name = ""
+        entered_pin = ""
+        is_authenticated = False
+        is_new_player = False
+
         with p_col1:
             if user_list:
                 options = ["-- Select Name --"] + user_list + ["+ Add New Player"]
                 selected_user = st.selectbox("Player Name:", options, key="player_select")
                 if selected_user == "+ Add New Player":
                     user_name = st.text_input("Enter New Name:", placeholder="Type name...", key="new_player_input").strip()
+                    is_new_player = True
                 elif selected_user != "-- Select Name --":
                     user_name = selected_user
-                else:
-                    user_name = ""
             else:
                 user_name = st.text_input("Player Name:", placeholder="Enter your name...", key="player_text_input").strip()
+                is_new_player = True
+
+        with p_col2:
+            if user_name:
+                stored_pin = user_pin_map.get(user_name.lower())
+                if is_new_player or not stored_pin:
+                    entered_pin = st.text_input("Create 4-Digit PIN:", type="password", max_chars=4, key="pin_create_input").strip()
+                    if len(entered_pin) == 4 and entered_pin.isdigit():
+                        is_authenticated = True
+                    elif entered_pin:
+                        st.warning("⚠️ Enter 4 numbers")
+                else:
+                    entered_pin = st.text_input("Enter 4-Digit PIN:", type="password", max_chars=4, key="pin_login_input").strip()
+                    if entered_pin == stored_pin:
+                        is_authenticated = True
+                        st.success("🔓 Authenticated")
+                    elif entered_pin:
+                        st.error("❌ Invalid PIN")
 
         if not gameweeks:
             st.error("No Gameweeks found in sheet.")
@@ -397,6 +417,9 @@ try:
             default_idx = gameweeks.index(default_gw) if default_gw in gameweeks else 0
             selected_gw = st.selectbox("Gameweek:", gameweeks, index=default_idx)
             filtered_fixtures = [m for m in fixtures if str(m.get("GameWeek", "")).strip() == str(selected_gw).strip()]
+
+            if not is_authenticated and user_name:
+                st.info("🔒 Enter your correct 4-Digit PIN above to unlock and edit predictions.")
 
             with st.form(key=f"gw_form_{selected_gw}_test_{test_mode}", clear_on_submit=False):
                 predictions_input = {}
@@ -475,9 +498,9 @@ try:
 
                             p_col1, p_col2 = st.columns(2)
                             with p_col1:
-                                h_str = st.text_input(f"{home}", value=init_h, placeholder="-", max_chars=2, key=f"home_{match_id}", label_visibility="collapsed")
+                                h_str = st.text_input(f"{home}", value=init_h, placeholder="-", max_chars=2, key=f"home_{match_id}", label_visibility="collapsed", disabled=not is_authenticated)
                             with p_col2:
-                                a_str = st.text_input(f"{away}", value=init_a, placeholder="-", max_chars=2, key=f"away_{match_id}", label_visibility="collapsed")
+                                a_str = st.text_input(f"{away}", value=init_a, placeholder="-", max_chars=2, key=f"away_{match_id}", label_visibility="collapsed", disabled=not is_authenticated)
                             
                             st.markdown("</div>", unsafe_allow_html=True)
                             predictions_input[match_id] = (h_str, a_str)
@@ -526,11 +549,13 @@ try:
                 st.markdown("<br>", unsafe_allow_html=True)
 
                 if has_submittable:
-                    submit_all_btn = st.form_submit_button("🚀 Save Predictions", use_container_width=True)
+                    submit_all_btn = st.form_submit_button("🚀 Save Predictions", use_container_width=True, disabled=not is_authenticated)
 
                     if submit_all_btn:
                         if not user_name:
                             st.error("❌ Please select or enter your player name at the top before submitting!")
+                        elif not is_authenticated:
+                            st.error("❌ Please enter your valid 4-digit PIN to submit.")
                         else:
                             parsed_predictions = {}
                             has_invalid = False
@@ -562,7 +587,6 @@ try:
 
                                     rows_to_append = []
                                     updated_count = 0
-                                    added_count = 0
 
                                     for m_id, (h_val, a_val) in parsed_predictions.items():
                                         key = (str(m_id).strip(), user_name.lower())
@@ -574,14 +598,13 @@ try:
                                         if key in row_map:
                                             target_row = row_map[key]
                                             predictions_sheet.update(
-                                                range_name=f"D{target_row}:F{target_row}", 
-                                                values=[[h_val, a_val, pts_awarded]]
+                                                range_name=f"D{target_row}:G{target_row}", 
+                                                values=[[h_val, a_val, pts_awarded, entered_pin]]
                                             )
                                             updated_count += 1
                                         else:
                                             pred_id = f"PRED_{datetime.now().strftime('%M%S')}_{m_id}"
-                                            rows_to_append.append([pred_id, user_name, m_id, h_val, a_val, pts_awarded])
-                                            added_count += 1
+                                            rows_to_append.append([pred_id, user_name, m_id, h_val, a_val, pts_awarded, entered_pin])
 
                                     if rows_to_append:
                                         predictions_sheet.append_rows(rows_to_append)
