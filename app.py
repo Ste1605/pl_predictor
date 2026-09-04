@@ -127,6 +127,28 @@ st.markdown("""
         border-radius: 8px !important;
     }
 
+    /* Expander Dark Mode & Mobile Overrides */
+    div[data-testid="stExpander"] {
+        background-color: #ffffff !important;
+        border: 1.5px solid #cbd5e1 !important;
+        border-radius: 12px !important;
+        margin-bottom: 12px !important;
+    }
+
+    div[data-testid="stExpander"] summary {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+        font-weight: 700 !important;
+        border-radius: 12px !important;
+    }
+
+    div[data-testid="stExpander"] summary p,
+    div[data-testid="stExpander"] summary span,
+    div[data-testid="stExpander"] summary div {
+        color: #0f172a !important;
+        font-weight: 700 !important;
+    }
+
     div[data-testid="stForm"] div[data-testid="stHorizontalBlock"] {
         display: flex !important;
         flex-direction: row !important;
@@ -355,6 +377,21 @@ try:
     gw_list = [str(m.get("GameWeek")).strip() for m in fixtures if m.get("GameWeek")]
     gameweeks = sorted(list(set(gw_list)), key=lambda x: int(x.replace("GW", "")) if x.replace("GW", "").isdigit() else x)
 
+    # Automatically identify active current gameweek based on fixtures status
+    default_gw = gameweeks[0] if gameweeks else "GW1"
+    for gw in gameweeks:
+        gw_matches = [m for m in fixtures if str(m.get("GameWeek", "")).strip() == str(gw).strip()]
+        has_unfinished = any(
+            str(m.get("Status", "")).strip().upper() not in ["FINISHED", "PAUSED"] 
+            and not is_kickoff_passed(m.get("Kickoff Time", ""))
+            for m in gw_matches
+        )
+        if has_unfinished:
+            default_gw = gw
+            break
+
+    default_idx = gameweeks.index(default_gw) if default_gw in gameweeks else 0
+
     # ------------------ TAB 1: PREDICTIONS ------------------
     with tab_predict:
         top_c1, top_c2 = st.columns([2, 1])
@@ -400,26 +437,12 @@ try:
         if not gameweeks:
             st.error("No Gameweeks found in sheet.")
         else:
-            default_gw = gameweeks[0]
-            for gw in gameweeks:
-                gw_matches = [m for m in fixtures if str(m.get("GameWeek", "")).strip() == str(gw).strip()]
-                has_unfinished = any(
-                    str(m.get("Status", "")).strip().upper() not in ["FINISHED", "PAUSED"] 
-                    and not is_kickoff_passed(m.get("Kickoff Time", ""))
-                    for m in gw_matches
-                )
-                if has_unfinished:
-                    default_gw = gw
-                    break
-
-            default_idx = gameweeks.index(default_gw) if default_gw in gameweeks else 0
-            selected_gw = st.selectbox("Gameweek:", gameweeks, index=default_idx)
+            selected_gw = st.selectbox("Gameweek:", gameweeks, index=default_idx, key="predict_gw_select")
             filtered_fixtures = [m for m in fixtures if str(m.get("GameWeek", "")).strip() == str(selected_gw).strip()]
 
             if not is_authenticated and user_name:
                 st.info("🔒 Enter your correct 4-Digit PIN above to unlock and view your predictions.")
 
-            # Form key bound strictly to authentication status
             form_key = f"gw_form_{selected_gw}_test_{test_mode}_auth_{is_authenticated}_{user_name.lower()}"
             with st.form(key=form_key, clear_on_submit=False):
                 predictions_input = {}
@@ -619,7 +642,8 @@ try:
     with tab_view_all:
         st.subheader("👀 All Submitted Predictions")
         if gameweeks:
-            selected_view_gw = st.selectbox("Select Gameweek:", gameweeks, key="all_picks_gw")
+            # Auto-default to the current active Gameweek
+            selected_view_gw = st.selectbox("Select Gameweek:", gameweeks, index=default_idx, key="all_picks_gw")
             
             gw_fixtures = [m for m in fixtures if str(m.get("GameWeek", "")).strip() == str(selected_view_gw).strip()]
             
@@ -652,7 +676,7 @@ try:
                     
                     if match_picks:
                         has_any_picks = True
-                        with st.expander(f"⚽ **{home} vs {away}** ({time_str if time_str else 'TBD'}) — *{len(match_picks)} picks*", expanded=True):
+                        with st.expander(f"⚽ {home} vs {away} ({time_str if time_str else 'TBD'}) — {len(match_picks)} picks", expanded=True):
                             df_match_picks = pd.DataFrame(match_picks)
                             st.dataframe(
                                 df_match_picks, 
